@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beautiful Chat App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            height: 600px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 5px;
+            font-size: 0.8rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #4ade80;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: #f8fafc;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .received {
+            align-self: flex-start;
+            background-color: #e2e8f0;
+            border-bottom-left-radius: 5px;
+            color: #334155;
+        }
+
+        .sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        .sent .message-info {
+            justify-content: flex-end;
+        }
+
+        .chat-input-container {
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 25px;
+            outline: none;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .typing-indicator {
+            padding: 5px 15px;
+            font-style: italic;
+            color: #64748b;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots span {
+            animation: typing 1.4s infinite;
+            display: inline-block;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .chat-container {
+                height: 100vh;
+                max-width: 100%;
+                border-radius: 0;
+            }
+            
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Chat App</h1>
+            <div class="status">
+                <div class="status-dot"></div>
+                <span>Online - Demo Mode</span>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="messages">
+            <div class="message received">
+                <div class="message-text">Hello! Welcome to our beautiful chat app. This is a demo version with simulated responses.</div>
+                <div class="message-info">
+                    <span class="sender">Bot</span>
+                    <span class="time" id="current-time">10:30 AM</span>
+                </div>
+            </div>
+            
+            <div class="message received">
+                <div class="message-text">Try sending a message to see how it works!</div>
+                <div class="message-info">
+                    <span class="sender">Bot</span>
+                    <span class="time">10:30 AM</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <span>Bot is typing</span>
+            <div class="typing-dots">
+                <span>.</span>
+                <span>.</span>
+                <span>.</span>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="message" placeholder="Type your message..." />
+            <button class="send-button" id="sendBtn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Mock Socket.IO implementation for demo purposes
+        class MockSocket {
+            constructor() {
+                this.listeners = {};
+                this.connected = true;
+            }
+            
+            on(event, callback) {
+                if (!this.listeners[event]) {
+                    this.listeners[event] = [];
+                }
+                this.listeners[event].push(callback);
+            }
+            
+            emit(event, data) {
+                console.log(`Emitting: ${event}`, data);
+                
+                // Simulate server responses
+                if (event === 'user-message') {
+                    // Show typing indicator
+                    this.simulateTyping();
+                    
+                    // Simulate bot response after delay
+                    setTimeout(() => {
+                        this.trigger('message', {
+                            text: this.generateResponse(data),
+                            sender: 'Bot',
+                            time: this.getCurrentTime()
+                        });
+                    }, 1500);
+                }
+            }
+            
+            trigger(event, data) {
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback(data));
+                }
+            }
+            
+            simulateTyping() {
+                const typingIndicator = document.getElementById('typingIndicator');
+                typingIndicator.style.display = 'block';
+                
+                // Scroll to bottom
+                const messagesContainer = document.getElementById('messages');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            generateResponse(userMessage) {
+                const responses = [
+                    "That's interesting! Tell me more.",
+                    "I understand what you're saying.",
+                    "Thanks for sharing that with me!",
+                    "How do you feel about that?",
+                    "That's a great point!",
+                    "I see what you mean.",
+                    "Let me think about that for a moment...",
+                    "That's really helpful information!",
+                    "I appreciate you sharing that.",
+                    "What else would you like to talk about?"
+                ];
+                
+                // Simple keyword-based responses
+                const message = userMessage.toLowerCase();
+                if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
+                    return "Hello there! How are you doing today?";
+                } else if (message.includes('how are you')) {
+                    return "I'm just a demo bot, but I'm functioning perfectly! How about you?";
+                } else if (message.includes('thank')) {
+                    return "You're welcome! Is there anything else I can help with?";
+                } else if (message.includes('bye') || message.includes('goodbye')) {
+                    return "Goodbye! Feel free to come back and chat anytime!";
+                } else if (message.includes('help')) {
+                    return "I'm here to help! This is a demo chat interface to show the beautiful UI.";
+                } else if (message.includes('name')) {
+                    return "I'm ChatBot, your friendly demo assistant!";
+                } else if (message.includes('weather')) {
+                    return "I don't have access to real weather data, but I hope it's nice where you are!";
+                } else if (message.includes('color') || message.includes('design')) {
+                    return "The purple and blue gradient is nice, isn't it? I think the designer did a great job!";
+                }
+                
+                // Random response if no keywords matched
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+            
+            getCurrentTime() {
+                const now = new Date();
+                return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            }
+        }
+
+        // Initialize mock socket
+        const socket = new MockSocket();
+        const sendBtn = document.getElementById("sendBtn");
+        const messageInput = document.getElementById("message");
+        const allMessages = document.getElementById("messages");
+        const typingIndicator = document.getElementById("typingIndicator");
+
+        // Set current time for initial message
+        document.getElementById('current-time').textContent = socket.getCurrentTime();
+
+        // Function to add a message to the chat
+        function addMessage(message, isSent = false) {
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            
+            const messageText = document.createElement("div");
+            messageText.className = "message-text";
+            messageText.innerText = message.text;
+            
+            const messageInfo = document.createElement("div");
+            messageInfo.className = "message-info";
+            
+            if (!isSent) {
+                const senderSpan = document.createElement("span");
+                senderSpan.className = "sender";
+                senderSpan.innerText = message.sender || "User";
+                messageInfo.appendChild(senderSpan);
+            }
+            
+            const timeSpan = document.createElement("span");
+            timeSpan.className = "time";
+            timeSpan.innerText = message.time || getCurrentTime();
+            messageInfo.appendChild(timeSpan);
+            
+            messageDiv.appendChild(messageText);
+            messageDiv.appendChild(messageInfo);
+            allMessages.appendChild(messageDiv);
+            
+            // Scroll to the bottom
+            allMessages.scrollTop = allMessages.scrollHeight;
+            
+            // Hide typing indicator when message is received
+            if (!isSent) {
+                typingIndicator.style.display = 'none';
+            }
+        }
+
+        // Function to get current time in HH:MM format
+        function getCurrentTime() {
+            const now = new Date();
+            return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        }
+
+        // Handle received messages
+        socket.on("message", (message) => {
+            addMessage(message);
+        });
+
+        // Handle typing indicators
+        let typingTimer;
+        messageInput.addEventListener('input', () => {
+            // Clear previous timer
+            clearTimeout(typingTimer);
+        });
+
+        // Send message on button click
+        sendBtn.addEventListener("click", (e) => {
+            sendMessage();
+        });
+
+        // Send message on Enter key
+        messageInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        // Function to send message
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (messageText) {
+                const message = {
+                    text: messageText,
+                    time: getCurrentTime()
+                };
+                
+                // Add message to UI immediately (optimistic update)
+                addMessage(message, true);
+                
+                // Emit to server
+                socket.emit("user-message", messageText);
+                
+                // Clear input
+                messageInput.value = "";
+            }
+        }
+
+        // Add some sample messages for demonstration after page load
+        setTimeout(() => {
+            addMessage({
+                text: "The interface looks amazing with these colors!",
+                sender: "User",
+                time: getCurrentTime()
+            }, false);
+            
+            setTimeout(() => {
+                addMessage({
+                    text: "Thank you! We used a purple to blue gradient for a modern look.",
+                    sender: "Bot",
+                    time: getCurrentTime()
+                });
+            }, 1000);
+        }, 2000);
+    </script>
+</body>
+</html>
