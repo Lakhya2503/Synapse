@@ -1,5 +1,5 @@
-import fs from 'fs'
-import logger from '../logger/wintson.logger.js';
+import fs from 'fs';
+import logger from '../logger/winston.logger.js';
 
 const filterObjectKeys  = (fieldsArray, objectArray) => {
   const filterArray = structuredClone(objectArray).map((originalObject)=>{
@@ -19,7 +19,7 @@ const filterObjectKeys  = (fieldsArray, objectArray) => {
 
 const paginatedPayload = (dataArray, page, limit) =>{
   const startPosition = +(page - 1) * limit;
-  
+
   const totalItems = dataArray.length
   const totalPages = Math.ceil(totalItems / limit)
 
@@ -97,18 +97,12 @@ const getMongoosePaginationOption = ( {
       ...customLabels,
     }
   }
-} 
+}
 const getRandomNumber = (max) => {
   return Math.floor(Math.random() * max)
 }
 
 export {
-  removeLocalFile,
-  getRandomNumber,
-  getLocalPath,
-  getMongoosePaginationOption,
-  removeUnusedMulerImageFileOnError,
-  paginatedPayload,
-  filterObjectKeys,
-  getStaticFilePath
-}
+  filterObjectKeys, getLocalPath,
+  getMongoosePaginationOption, getRandomNumber, getStaticFilePath, paginatedPayload, removeLocalFile, removeUnusedMulerImageFileOnError
+};
