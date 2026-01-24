@@ -32,7 +32,7 @@ intializeSocketIO(io)
 
 app.use(
   cors({
-      origin : 
+      origin :
         process.env.CORS_ORIGIN === "*" ? "*" : process.env.CORS_ORIGIN?.split(","),
         credentials : true
   })
@@ -40,20 +40,19 @@ app.use(
 
 app.use(requestIp.mw())
 
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  keyGenerator: (req, res) => {
-    return req.clientIp; // IP address from requestIp.mw(), as opposed to req.ip
-  },
+  windowMs: 15 * 60 * 1000,
+  max: 5000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req),
   handler: (_, __, ___, options) => {
     throw new ApiError(
       options.statusCode || 500,
-      `There are too many requests. You are only allowed ${
-        options.max
-      } requests per ${options.windowMs / 60000} minutes`
+      `There are too many requests. You are only allowed ${options.max} requests per ${
+        options.windowMs / 60000
+      } minutes`
     );
   },
 });
@@ -67,7 +66,7 @@ const limitOfFilesType = '5mb'
 // Fixed CORS configuration
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
-  credentials: true, 
+  credentials: true,
   methods: ['GET', 'POST', 'DELETE', 'PUT']
 }))
 
@@ -113,7 +112,7 @@ import morganMiddelware from './logger/morgon.logger.js'
 // *Seeding
 
 app.post(
-  '/api/v1/synapse/seed/genrate-credentials', 
+  '/api/v1/synapse/seed/genrate-credentials',
   getGeneratedCredentials
 )
 
@@ -125,24 +124,20 @@ app.post(
 
 
 // ----------------------------------------------------------------//
-// * users 
+// * users
 app.use('/api/v1/synapse', authRouter)
 
 
 // ----------------------------------------------------------------//
-// * chat 
+// * chat
 app.use('/api/v1/synapse/chats', chatRouter)
 
 
 // ----------------------------------------------------------------//
-// * Messages 
+// * Messages
 app.use('/api/v1/synapse/messages', messageRouter)
 
 
 export {
   httpServer
 }
-
-
-
-
