@@ -195,6 +195,7 @@ app.use((req, res) => {
 // This MUST come after 404 handler
 app.use((err, req, res, next) => {
   console.log(`Route ${req.originalUrl} not found`);
+  
   console.error('Server Error:', err.message)
 
 
