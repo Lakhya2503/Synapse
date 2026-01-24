@@ -7,6 +7,8 @@ export const verifyAuthUser = async (req, _, next) => {
     // 1️⃣ Read token from Authorization header
     const authHeader = req.headers.authorization;
 
+    console.log('authHeader:', authHeader);
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       throw new ApiError(401, "Access token not provided");
     }

@@ -196,7 +196,7 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.log(`Route ${req.originalUrl} not found`);
   console.error('Server Error:', err.message)
-  
+
 
   const statusCode = err.status || err.statusCode || 500
   const message = isProduction && statusCode === 500
