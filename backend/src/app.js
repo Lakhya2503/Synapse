@@ -194,7 +194,9 @@ app.use((req, res) => {
 // ========== 7. ERROR HANDLER ==========
 // This MUST come after 404 handler
 app.use((err, req, res, next) => {
+  console.log(`Route ${req.originalUrl} not found`);
   console.error('Server Error:', err.message)
+  
 
   const statusCode = err.status || err.statusCode || 500
   const message = isProduction && statusCode === 500
