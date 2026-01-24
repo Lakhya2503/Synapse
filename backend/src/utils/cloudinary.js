@@ -1,6 +1,6 @@
-import { v2 as cloudinary } from 'cloudinary'
-import fs from 'fs'
-import ApiError from './ApiError.js'
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
+import ApiError from './ApiError.js';
 
 
 cloudinary.config({
@@ -9,7 +9,7 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
 });
 
-// console.log(
+//  (
 //     process.env.CLOUDINARY_API_KEY,
 //     process.env.CLOUDINARY_API_SECRET,
 //     process.env.CLOUDINARY_CLOUD_NAME
@@ -21,7 +21,7 @@ const uploadFiles = async function (localFilePath) {
         if (!localFilePath) {
             throw new ApiError(404, "localFile not found")
         }
-        // console.log(
+        //  (
         //   process.env.CLOUDINARY_API_KEY,
         //   process.env.CLOUDINARY_API_SECRET,
         //   process.env.CLOUDINARY_CLOUD_NAME
@@ -29,15 +29,14 @@ const uploadFiles = async function (localFilePath) {
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: 'auto'
         })
-        console.log(`localFilePath was ${response.url}`);
+         (`localFilePath was ${response.url}`);
         return response
     } catch (error) {
         fs.unlinkSync(localFilePath)
         throw new ApiError(404, error.message || 'local file not found')
     }
 
-    
+
 }
 
 export default uploadFiles
-

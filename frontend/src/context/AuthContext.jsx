@@ -1,14 +1,14 @@
   import { Loader } from 'lucide-react';
-  import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-  import { useNavigate } from 'react-router-dom';
-  import {
-    userLogin,
-    userLogout,
-    userRegister,
-    verificationOTPGenerate,
-    verifyEmailWithOTP,
-  } from '../api';
-  import { LocalStorage, requestHandler } from '../utils';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  userLogin,
+  userLogout,
+  userRegister,
+  verificationOTPGenerate,
+  verifyEmailWithOTP,
+} from '../api';
+import { LocalStorage, requestHandler } from '../utils';
 
   const AuthContext = createContext(null);
 
@@ -116,7 +116,7 @@
     };
 
 
-    console.log(`token : ${token}`);
+    //  (`token : ${token}`);
 
 
 

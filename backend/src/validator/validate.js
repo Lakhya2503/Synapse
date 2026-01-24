@@ -4,18 +4,18 @@ import ApiError from '../utils/ApiError.js'
 const validate = (req,res,next) =>{
     const errors = validationResult(req)
 
-    // console.log(`req : ${req}`);
-    
+    //  (`req : ${req}`);
+
     if(errors.isEmpty()){
         return next()
     }
-    // console.log(`
+    //  (`
     //     req : ${validationResult(req)}
     //     `);
 
     //     const { username, password}  = req.body
 
-    //     console.log(
+    //      (
     //         `username : ${username}
     //         password : ${password}
     //         `

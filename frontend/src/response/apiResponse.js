@@ -1,5 +1,5 @@
 export const apiResponse = (data) => {
-    console.log(`user data : ${data}`);
+    //  (`user data : ${data}`);
     return {
             data : data.data,
             message : data.message,

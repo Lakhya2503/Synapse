@@ -1,7 +1,7 @@
-import { Check, LogOut, Mail, Pencil, Phone, Calendar, MapPin, Shield, Trash2, User, UserPlus, Users, X, MessageCircle, Ban, Star, Search, MoreVertical, AlertCircle } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { AlertCircle, Check, LogOut, MoreVertical, Pencil, Shield, Trash2, User, UserPlus, Users, X } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FakeGroupAvatar } from "../../../public/index";
-import { deleteGroupChat, getAllUser, updateGroupName, removeUserFromGroup, leaveGroupChat } from "../../api";
+import { deleteGroupChat, leaveGroupChat, removeUserFromGroup, updateGroupName } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { requestHandler } from "../../utils";
 import AddParticipantsModal from "../forms/AddParticipantsModal";
@@ -172,7 +172,7 @@ const ProfileSection = memo(({ otherUser, onClose, isOpen, chatId, onParticipant
 
   const handleViewParticipantProfile = useCallback(() => {
     if (!selectedParticipant) return;
-    console.log("View profile of:", selectedParticipant.username);
+    //  ("View profile of:", selectedParticipant.username);
     alert(`Viewing profile of ${selectedParticipant.username}`);
     setShowRemoveMenu(false);
     setSelectedParticipant(null);
@@ -281,10 +281,10 @@ const ProfileSection = memo(({ otherUser, onClose, isOpen, chatId, onParticipant
     window.open(avatar, '_blank');
   };
 
-  const handleUploadImage = () => console.log("Upload image clicked");
+  // const handleUploadImage = () =>  ("Upload image clicked");
   const handleDeleteImage = () => {
     if (!window.confirm("Are you sure you want to delete profile image?")) return;
-    console.log("Delete image");
+    //  ("Delete image");
   };
 
   // RENDER GROUP PROFILE

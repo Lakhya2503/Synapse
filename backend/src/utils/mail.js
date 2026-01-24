@@ -1,20 +1,20 @@
-import nodemailer from 'nodemailer'
 import Mailgen from 'mailgen'
+import nodemailer from 'nodemailer'
 
 const sendMail = async (options) => {
     const mailGenerator = new Mailgen({
         theme: 'default',
         product: {
-            name: "Synapse",    
+            name: "Synapse",
             link: "localhost:5002"
         },
     })
 
     const emailTextual = mailGenerator.generatePlaintext(options.mailContent)
-    const emailHtml = mailGenerator.generate(options.mailContent) 
+    const emailHtml = mailGenerator.generate(options.mailContent)
 
     const transporter = nodemailer.createTransport({
-        host: process.env.MAILSTREP_SMTP_HOST, 
+        host: process.env.MAILSTREP_SMTP_HOST,
         port: process.env.MAILSTREP_SMTP_PORT,
         auth: {
             user: process.env.MAILSTREP_SMTP_USER,
@@ -23,19 +23,19 @@ const sendMail = async (options) => {
     })
 
     const mail = {
-        from: process.env.MAIL_FROM || 'mail.synapse@gmail.com', 
+        from: process.env.MAIL_FROM || 'mail.synapse@gmail.com',
         to: options.email,
         subject: options.subject,
-        text: emailTextual, 
+        text: emailTextual,
         html: emailHtml
     }
 
     try {
         await transporter.sendMail(mail)
-        console.log('Email sent successfully')
+        //  ('Email sent successfully')
         return true
     } catch (error) {
-        console.log('Error sending email:', error.message)
+        //  ('Error sending email:', error.message)
         return false
     }
 }
@@ -83,7 +83,7 @@ const emailVerificationMailgenContent = (username, verificationUrl, otp) => {
 
 const sendOTPVerificationEmail = async (email, username, verificationUrl, otp) => {
     const mailContent = emailVerificationMailgenContent(username, verificationUrl, otp)
-    
+
     return await sendMail({
         email: email,
         subject: "Verify Your Email - SYNAPSE",
@@ -94,7 +94,7 @@ const sendOTPVerificationEmail = async (email, username, verificationUrl, otp) =
 
 const sendPasswordResetEmail = async (email, username, resetUrl) => {
     const mailContent = forgetPasswordMailgenContent(username, resetUrl)
-    
+
     return await sendMail({
         email: email,
         subject: "Reset Your Password - SYNAPSE",
@@ -103,9 +103,8 @@ const sendPasswordResetEmail = async (email, username, resetUrl) => {
 }
 
 export {
-    sendMail,
-    sendOTPVerificationEmail, 
-    sendPasswordResetEmail,
-    emailVerificationMailgenContent,
-    forgetPasswordMailgenContent
+  emailVerificationMailgenContent,
+  forgetPasswordMailgenContent, sendMail,
+  sendOTPVerificationEmail,
+  sendPasswordResetEmail
 }

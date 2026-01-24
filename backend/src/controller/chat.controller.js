@@ -7,12 +7,10 @@ import { emitSocketEvent } from "../socket/index.js";
 import ApiError from "../utils/ApiError.js";
 import ApiRespose from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import jwt  from 'jsonwebtoken';
-import { generateAccessRefreshToken } from "./user.controller.js";
 
 
 const chatCommanAggregation = () => {
-    return [    
+    return [
       {
         // lookup for the participants presents
         $lookup: {
@@ -74,9 +72,9 @@ const chatCommanAggregation = () => {
         }
       }
     ];
-}; 
+};
 
-const deleteCascadeChatMessage = async (chatId) => {    
+const deleteCascadeChatMessage = async (chatId) => {
     const message = await ChatMessage.find({
         chat: new mongoose.Types.ObjectId(chatId)
     });
@@ -88,12 +86,12 @@ const deleteCascadeChatMessage = async (chatId) => {
     //         return message.attachements
     //     })
     // )
-    
+
     // attachements.forEach((attachements) => {
     //     //remove attachement files from the local storege
     //     removeEventListener(attachements.localPath)
     // })
-    
+
     await ChatMessage.deleteMany({
         chat: new mongoose.Types.ObjectId(chatId)
     });
@@ -116,7 +114,7 @@ const searchAvailableUsers = asyncHandler(async (req, res) => {
             }
         }
     ])
-    
+
     return res.status(200).json(new ApiRespose(200 , users, "Users fetched successfully"))
 })
 
@@ -124,17 +122,17 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
     const { receiverId } = req.params
 
     const sender = await User.findById(req.user._id)
-    
+
     const receiver = await User.findById(receiverId)
-    
+
     if (!receiver) {
         throw new ApiError(404, "Looks like that person isn’t on SYNAPSE yet")
-    }   
+    }
 
     if (receiver._id.toString() === req.user._id.toString()) {
         throw new ApiError(404, "Oops! You can’t start a chat with yourself.")
     }
-    
+
    const chat = await Chat.aggregate([
        {
            $match: {
@@ -153,9 +151,9 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
         },
         ...chatCommanAggregation()
     ])
-    
 
-    
+
+
     if (chat.length) {
         return res.status(200).json(new ApiRespose(200, chat[0], "Your chat went through successfully."))
     }
@@ -166,8 +164,7 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
         admin: req.user._id
     });
 
-    // console.log(`new chat : ${newChatInstant}`);
-    
+
 
 
     const createdChat = await Chat.aggregate([
@@ -200,12 +197,12 @@ const createOrGetAOneOnOneChat = asyncHandler(async (req, res) => {
     return res.status(200).json(200, payload, "Chat reterieved Sucessfully")
 })
 
-const createGroupChat = asyncHandler(async (req, res) => { 
+const createGroupChat = asyncHandler(async (req, res) => {
     const { name, participants } = req.body
 
-    // console.log(`name : ${name}`);
-    // console.log(`participants : ${participants}`);
-    
+    //  (`name : ${name}`);
+    //  (`participants : ${participants}`);
+
 
     if (participants.includes(req.user._id.toString())) {
         throw new ApiError(400, "participants array should not contain the group creator")
@@ -283,11 +280,11 @@ const renameGroupChat = asyncHandler(async (req, res) => {
 
     const name = groupName;
 
-    console.log(name);
-    console.log(req.params.chatId);
+    //  (name);
+    //  (req.params.chatId);
 
 
-    
+
 
     const groupChat = await Chat.findOne({
         _id: new mongoose.Types.ObjectId(chatId),
@@ -340,8 +337,8 @@ const renameGroupChat = asyncHandler(async (req, res) => {
 const deleteGroupChat = asyncHandler(async (req, res) => {
     const { chatId } = req.params
 
-    console.log(chatId);
-    
+    //  (chatId);
+
 
     const groupChat = await Chat.aggregate([
         {
@@ -360,8 +357,8 @@ const deleteGroupChat = asyncHandler(async (req, res) => {
         throw new ApiError(400 , " GROUP CHAT NOT EXIST")
     }
 
-    // console.log(chat.admin._id.toString() !== req.user._id.toString());
-    
+    //  (chat.admin._id.toString() !== req.user._id.toString());
+
 
 
     if (chat.admin._id.toString() !== req.user._id.toString()) {
@@ -479,9 +476,9 @@ const leaveGroupChat = asyncHandler(async (req, res) => {
 const addNewParticipantInGroupChat = asyncHandler(async (req, res) =>{
     const { chatId, participantId } = req.params
 
-    // console.log("chatId",chatId);
-    // console.log("participantId",participantId);
-    
+    //  ("chatId",chatId);
+    //  ("participantId",participantId);
+
 
     const groupChat = await Chat.findOne(
         {
@@ -499,7 +496,7 @@ const addNewParticipantInGroupChat = asyncHandler(async (req, res) =>{
     }
 
     const existParticipants = groupChat.participants
-    
+
 
     if (existParticipants.includes(participantId)) {
       throw new ApiError(409, "USER ALREADY IN GROUP CHAT");
@@ -537,7 +534,7 @@ const addNewParticipantInGroupChat = asyncHandler(async (req, res) =>{
     //     ChatEventEnum.NEW_CHAT_EVENT,
     //     payload
     // )
-    
+
 
     return res
     .status(200)
@@ -628,21 +625,21 @@ const getAllChats = asyncHandler(async (req, res) => {
 })
 
 // const updateGroupAvatar = asyncHandler(async(req,res) =>{
-    
+
 // })
 
 export {
-  addNewParticipantInGroupChat, 
-  chatCommanAggregation, 
-  createGroupChat, 
-  createOrGetAOneOnOneChat, 
-  deleteCascadeChatMessage, 
+  addNewParticipantInGroupChat,
+  chatCommanAggregation,
+  createGroupChat,
+  createOrGetAOneOnOneChat,
+  deleteCascadeChatMessage,
   deleteGroupChat,
-  deleteOneOnOneChat, 
-  getAllChats, 
-  getGroupChatDetails, 
-  leaveGroupChat, 
-  removeParticipantFromGroupChat, 
-  renameGroupChat, 
-  searchAvailableUsers,
+  deleteOneOnOneChat,
+  getAllChats,
+  getGroupChatDetails,
+  leaveGroupChat,
+  removeParticipantFromGroupChat,
+  renameGroupChat,
+  searchAvailableUsers
 };

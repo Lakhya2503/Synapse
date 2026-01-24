@@ -1,17 +1,16 @@
-import asyncHandler from "../utils/asyncHandler.js";
-import ApiResponse from "../utils/ApiResponse.js";
+import jwt from 'jsonwebtoken';
+import { userLoginType } from "../constant.js";
 import User from "../model/user.model.js";
 import ApiError from "../utils/ApiError.js";
+import ApiResponse from "../utils/ApiResponse.js";
+import asyncHandler from "../utils/asyncHandler.js";
 import uploadFiles from "../utils/cloudinary.js";
-import { sendMail, 
-  forgetPasswordMailgenContent, 
-  emailVerificationMailgenContent, 
-  sendOTPVerificationEmail 
+import {
+    emailVerificationMailgenContent,
+    forgetPasswordMailgenContent,
+    sendMail
 } from "../utils/mail.js";
-import { userLoginType } from "../constant.js";
 import OTPGenerate from './../utils/OTPgenerate.js';
-import  crypto  from 'crypto';
-import jwt from 'jsonwebtoken';
 
 
 let storeOTP = ''
@@ -34,7 +33,7 @@ const generateAccessRefreshToken = async (userId) => {
 
 const createAccount = asyncHandler(async (req, res) => {
 
-  console.log(` req ${req}`);
+   (` req ${req}`);
 
   const {
     username,
@@ -42,10 +41,10 @@ const createAccount = asyncHandler(async (req, res) => {
     email,
   } = req.body;
 
-  // console.log(`req.body : ${req.body}`);
+  //  (`req.body : ${req.body}`);
 
 
-  // console.log(`username : ${username} ; password : ${password} ; email : ${email}`);
+  //  (`username : ${username} ; password : ${password} ; email : ${email}`);
 
 
 
@@ -88,9 +87,9 @@ const createAccount = asyncHandler(async (req, res) => {
   user.emailVerificationToken = hashedToken
   user.emailVerificationExpiry = tokenExpiry
 
-  // console.log(`email : ${user.email}`);
-  // console.log(`username : ${user.username}`);
-  // console.log(`user verification url : ${req.protocol}://${req.get(
+  //  (`email : ${user.email}`);
+  //  (`username : ${user.username}`);
+  //  (`user verification url : ${req.protocol}://${req.get(
   //         "host"
   //     )}/synapse/v1/users/verify-email${unHashedToken}`);
 
@@ -120,7 +119,7 @@ const createAccount = asyncHandler(async (req, res) => {
 const generateOTP = asyncHandler(async(req, res) => {
     try {
         const otp = OTPGenerate()
-        console.log(`Generated OTP: ${otp}`)
+         (`Generated OTP: ${otp}`)
 
         // Store OTP (you might want to associate it with user's email/ID)
         storeOTP = otp
@@ -130,8 +129,8 @@ const generateOTP = asyncHandler(async(req, res) => {
         const userEmail = req.user?.email || req.body?.email
         const username = req.user?.username || req.body?.username
 
-        // console.log(`userEmail : ${userEmail}`);
-        // console.log(`username : ${username}`);
+        //  (`userEmail : ${userEmail}`);
+        //  (`username : ${username}`);
 
 
         if (!userEmail) {
@@ -143,7 +142,7 @@ const generateOTP = asyncHandler(async(req, res) => {
         // Generate verification URL (modify as per your frontend route)
         const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/users/verify-otp?otp=${otp}&email=${userEmail}`
 
-        console.log(`verificationURL :${verificationUrl}`);
+         (`verificationURL :${verificationUrl}`);
 
 
         // Send OTP email
@@ -154,7 +153,7 @@ const generateOTP = asyncHandler(async(req, res) => {
         //     otp
         // )
 
-        // console.log(`email :${emailSent}`);
+        //  (`email :${emailSent}`);
 
 
         // if (!emailSent) {
@@ -165,7 +164,7 @@ const generateOTP = asyncHandler(async(req, res) => {
 
 
 
-        console.log(`OTP ${otp} sent to ${userEmail}`)
+         (`OTP ${otp} sent to ${userEmail}`)
 
         // Don't send OTP in response for security - only send success message
         res
@@ -182,11 +181,11 @@ const generateOTP = asyncHandler(async(req, res) => {
 
 const verifyUserEmailAndOTP = asyncHandler(async(req,res)=>{
 
-    console.log(` storeOTP : ${storeOTP} `);
+     (` storeOTP : ${storeOTP} `);
 
   const { otp } = req.body
 
-  console.log(` otp from body : ${otp} `);
+   (` otp from body : ${otp} `);
 
   if(otp !== storeOTP) {
     throw new ApiError(400, "The OTP you entered is incorrect");
@@ -228,8 +227,8 @@ const loggedInUser = asyncHandler(async (req, res) => {
       }
     );
 
-    // console.log(`user ${findUser}`);
-    
+    //  (`user ${findUser}`);
+
 
 
   if (!findUser) throw new ApiError(404, "That user doesn’t seem to exist.");
@@ -249,9 +248,9 @@ const loggedInUser = asyncHandler(async (req, res) => {
     findUser._id
   );
 
-  // console.log(`accessToken , ${accessToken}`);
-  // console.log(`refreshToken , ${refreshToken}`);
-  
+  //  (`accessToken , ${accessToken}`);
+  //  (`refreshToken , ${refreshToken}`);
+
 
 
   const user = await User.findById(findUser._id).select(
@@ -266,7 +265,7 @@ const loggedInUser = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, cookieOptions)
     .cookie("refreshToken", refreshToken, cookieOptions)
-    .json(new ApiResponse(200, {user, accessToken, refreshToken}, "Welcome back to SYNAPSE 🫠")); // the accessToken and refreshToken in response  if clinet decide to save themeself 
+    .json(new ApiResponse(200, {user, accessToken, refreshToken}, "Welcome back to SYNAPSE 🫠")); // the accessToken and refreshToken in response  if clinet decide to save themeself
 });
 
 const loggedOutUser = asyncHandler(async (req, res) => {
@@ -438,7 +437,7 @@ const accessRefreshToken = asyncHandler(async(req,res)=>{
     }
 
     try {
-        
+
         const decodedToken =jwt.verify(
             incommingRefreshToken,
             process.env.REFRESH_TOKEN
@@ -489,17 +488,6 @@ const accessRefreshToken = asyncHandler(async(req,res)=>{
 
 
 export {
-  generateAccessRefreshToken,
-  createAccount,
-  getUser,
-  verifyUserEmailAndOTP,
-  loggedInUser,
-  loggedOutUser,
-  forgetPasswordRequest,
-  changeCurrentPassword,
-  updateUsername,
-  updateUserFullName,
-  updateUserAvatar,
-  generateOTP,
-  accessRefreshToken
+    accessRefreshToken, changeCurrentPassword, createAccount, forgetPasswordRequest, generateAccessRefreshToken, generateOTP, getUser, loggedInUser,
+    loggedOutUser, updateUserAvatar, updateUserFullName, updateUsername, verifyUserEmailAndOTP
 };

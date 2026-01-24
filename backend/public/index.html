@@ -215,7 +215,7 @@
                 max-width: 100%;
                 border-radius: 0;
             }
-            
+
             body {
                 padding: 0;
             }
@@ -231,7 +231,7 @@
                 <span>Online - Demo Mode</span>
             </div>
         </div>
-        
+
         <div class="chat-messages" id="messages">
             <div class="message received">
                 <div class="message-text">Hello! Welcome to our beautiful chat app. This is a demo version with simulated responses.</div>
@@ -240,7 +240,7 @@
                     <span class="time" id="current-time">10:30 AM</span>
                 </div>
             </div>
-            
+
             <div class="message received">
                 <div class="message-text">Try sending a message to see how it works!</div>
                 <div class="message-info">
@@ -249,7 +249,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="typing-indicator" id="typingIndicator">
             <span>Bot is typing</span>
             <div class="typing-dots">
@@ -258,7 +258,7 @@
                 <span>.</span>
             </div>
         </div>
-        
+
         <div class="chat-input-container">
             <input type="text" class="chat-input" id="message" placeholder="Type your message..." />
             <button class="send-button" id="sendBtn">
@@ -274,22 +274,21 @@
                 this.listeners = {};
                 this.connected = true;
             }
-            
+
             on(event, callback) {
                 if (!this.listeners[event]) {
                     this.listeners[event] = [];
                 }
                 this.listeners[event].push(callback);
             }
-            
+
             emit(event, data) {
-                console.log(`Emitting: ${event}`, data);
-                
+
                 // Simulate server responses
                 if (event === 'user-message') {
                     // Show typing indicator
                     this.simulateTyping();
-                    
+
                     // Simulate bot response after delay
                     setTimeout(() => {
                         this.trigger('message', {
@@ -300,22 +299,22 @@
                     }, 1500);
                 }
             }
-            
+
             trigger(event, data) {
                 if (this.listeners[event]) {
                     this.listeners[event].forEach(callback => callback(data));
                 }
             }
-            
+
             simulateTyping() {
                 const typingIndicator = document.getElementById('typingIndicator');
                 typingIndicator.style.display = 'block';
-                
+
                 // Scroll to bottom
                 const messagesContainer = document.getElementById('messages');
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
-            
+
             generateResponse(userMessage) {
                 const responses = [
                     "That's interesting! Tell me more.",
@@ -329,7 +328,7 @@
                     "I appreciate you sharing that.",
                     "What else would you like to talk about?"
                 ];
-                
+
                 // Simple keyword-based responses
                 const message = userMessage.toLowerCase();
                 if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
@@ -349,11 +348,11 @@
                 } else if (message.includes('color') || message.includes('design')) {
                     return "The purple and blue gradient is nice, isn't it? I think the designer did a great job!";
                 }
-                
+
                 // Random response if no keywords matched
                 return responses[Math.floor(Math.random() * responses.length)];
             }
-            
+
             getCurrentTime() {
                 const now = new Date();
                 return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -374,33 +373,33 @@
         function addMessage(message, isSent = false) {
             const messageDiv = document.createElement("div");
             messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
-            
+
             const messageText = document.createElement("div");
             messageText.className = "message-text";
             messageText.innerText = message.text;
-            
+
             const messageInfo = document.createElement("div");
             messageInfo.className = "message-info";
-            
+
             if (!isSent) {
                 const senderSpan = document.createElement("span");
                 senderSpan.className = "sender";
                 senderSpan.innerText = message.sender || "User";
                 messageInfo.appendChild(senderSpan);
             }
-            
+
             const timeSpan = document.createElement("span");
             timeSpan.className = "time";
             timeSpan.innerText = message.time || getCurrentTime();
             messageInfo.appendChild(timeSpan);
-            
+
             messageDiv.appendChild(messageText);
             messageDiv.appendChild(messageInfo);
             allMessages.appendChild(messageDiv);
-            
+
             // Scroll to the bottom
             allMessages.scrollTop = allMessages.scrollHeight;
-            
+
             // Hide typing indicator when message is received
             if (!isSent) {
                 typingIndicator.style.display = 'none';
@@ -445,13 +444,13 @@
                     text: messageText,
                     time: getCurrentTime()
                 };
-                
+
                 // Add message to UI immediately (optimistic update)
                 addMessage(message, true);
-                
+
                 // Emit to server
                 socket.emit("user-message", messageText);
-                
+
                 // Clear input
                 messageInput.value = "";
             }
@@ -464,7 +463,7 @@
                 sender: "User",
                 time: getCurrentTime()
             }, false);
-            
+
             setTimeout(() => {
                 addMessage({
                     text: "Thank you! We used a purple to blue gradient for a modern look.",

@@ -1,16 +1,15 @@
-import { ChatEventEnum } from '../constant.js'
-import { Socket } from 'socket.io'
 import cookie from 'cookie'
-import ApiError from '../utils/ApiError.js'
 import jwt from 'jsonwebtoken'
+import { ChatEventEnum } from '../constant.js'
 import User from '../model/user.model.js'
+import ApiError from '../utils/ApiError.js'
 
 const onlineUsers = new Map()
 
 const mountJoinChatEvent = (socket) => {
     socket.on(ChatEventEnum.JOIN_CHAT_EVENT, (chatId) => {
-        console.log(`User join the chat .🖐️chatId ${chatId}`);
-        socket.join(chatId)    
+        //  (`User join the chat .🖐️chatId ${chatId}`);
+        socket.join(chatId)
     })
 }
 
@@ -23,7 +22,7 @@ const mountParticipantTypingEvent = (socket) => {
 const mountParticipantStoppedTypingEvent = (socket) => {
     socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId) => {
         socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT, chatId)
-    }) 
+    })
 }
 
 const intializeSocketIO = (io) => {
@@ -66,24 +65,24 @@ const intializeSocketIO = (io) => {
 
                 socket.emit(ChatEventEnum.CONNECTED_EVENT)
                 socket.emit(ChatEventEnum.USER_ONLINE_EVENT)
-                
-                console.log(`USER CONNECTED ✨✨ .userID: ${user._id.toString()}`);
+
+                //  (`USER CONNECTED ✨✨ .userID: ${user._id.toString()}`);
 
                 onlineUsers.set(user._id, socket.id);
 
                 io.emit("user_online", { userId: user._id });
 
-                console.log(`user online ${user._id}`);
-                
+                //  (`user online ${user._id}`);
+
 
 
                 mountJoinChatEvent(socket)
                 mountParticipantTypingEvent(socket)
                 mountParticipantStoppedTypingEvent(socket)
-                
+
 
                 socket.on(ChatEventEnum.DISCONNECTED_EVENT, () => {
-                    console.log(`USER DISCONNECTED 🚫 .userID + ${socket.user?._id}`);
+                    //  (`USER DISCONNECTED 🚫 .userID + ${socket.user?._id}`);
 
                      onlineUsers.delete(user._id);
                      io.emit("user_offline", { userId: user._id });
@@ -91,7 +90,7 @@ const intializeSocketIO = (io) => {
                     if (socket.user?._id) {
                         socket.leave(socket.user._id)
                     }
-                })  
+                })
             } catch (error) {
                 socket.emit(
                     ChatEventEnum.SOCKET_EVENT_ERROR,
@@ -105,6 +104,4 @@ const emitSocketEvent = (req, roomId, event, payload) => {
     req.app.get("io").in(roomId).emit(event, payload)
 }
 
-export {
-    intializeSocketIO, emitSocketEvent
-}
+export { emitSocketEvent, intializeSocketIO }

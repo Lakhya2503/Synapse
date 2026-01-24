@@ -49,16 +49,16 @@ export const SocketProvider = ({ children }) => {
 
     /* ---------- Events ---------- */
     newSocket.on("connect", () => {
-      console.log("✅ Socket connected:", newSocket.id)
+      //  ("✅ Socket connected:", newSocket.id)
       setIsConnected(true)
     })
 
     newSocket.on(ChatEventEnum.CONNECTED_EVENT, () => {
-      console.log("🤝 Backend handshake complete")
+      //  ("🤝 Backend handshake complete")
     })
 
     newSocket.on("disconnect", (reason) => {
-      console.log("❌ Socket disconnected:", reason)
+      //  ("❌ Socket disconnected:", reason)
       setIsConnected(false)
     })
 

@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import {
-  Bell, Lock, Eye, EyeOff, Moon, Shield, User, Mail,
-  Phone, Key, Palette, Globe, Camera, Edit3, Save, X,
-  ShieldCheck, Smartphone, LogOut, Trash2, CheckCircle,
-  Calendar, Verified
+  Bell,
+  Calendar,
+  Camera,
+  CheckCircle,
+  Edit3,
+  Eye, EyeOff,
+  Globe,
+  Key,
+  LogOut,
+  Mail,
+  Moon,
+  Palette,
+  Phone,
+  Save,
+  Shield,
+  ShieldCheck, Smartphone,
+  Trash2,
+  User,
+  Verified,
+  X
 } from 'lucide-react';
+import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 const Setting = () => {
   const { user, logout } = useAuth();
@@ -34,7 +50,7 @@ const Setting = () => {
 
   const handleSaveChanges = async () => {
     try {
-      console.log('Saving changes:', editedFields);
+      //  ('Saving changes:', editedFields);
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to save changes:', error);

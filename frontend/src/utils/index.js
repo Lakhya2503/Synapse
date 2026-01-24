@@ -18,16 +18,16 @@ export const requestHandler = async (
             throw new Error('No data received from API');
         }
 
-        console.log("res : ",response.data);
+        //  ("res : ",response.data);
 
-        // console.log('API Response:', response);
-        console.log('API Response:', response.data);
+        //  ('API Response:', response);
+        //  ('API Response:', response.data);
         onSuccess(response.data);
 
     } catch (error) {
         // console.error('Request failed:', error);
 
-        console.log(error.message);
+        //  (error.message);
 
 
         // Handle auth errors

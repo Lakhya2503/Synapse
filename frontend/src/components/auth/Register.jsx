@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/20/solid";
-import { FaGoogle, FaGithub, FaUser, FaCamera } from "react-icons/fa";
-import { useAuth } from "../../context/AuthContext";
+import { useState } from "react";
+import { FaCamera, FaGithub, FaGoogle, FaUser } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { userRegister } from "../../api";
+import { useAuth } from "../../context/AuthContext";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -97,7 +97,7 @@ const Register = () => {
       });
 
       const res = await userRegister(formData);
-      console.log(res.data);
+       (res.data);
 
       // Redirect to login page after successful registration
       navigate("/login", { state: { message: "Registration successful! Please login." } });

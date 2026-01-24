@@ -1,14 +1,12 @@
+import mongoose from "mongoose";
+import { ChatEventEnum } from '../constant.js';
+import { emitSocketEvent } from '../socket/index.js';
+import ApiError from "../utils/ApiError.js";
 import ApiRespose from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import User from './../model/user.model.js';
-import mongoose from "mongoose";
-import { ChatEventEnum } from '../constant.js'
-import { emitSocketEvent } from '../socket/index.js'
-import { getLocalPath, getStaticFilePath, removeLocalFile } from '../utils/helper.js'
+import { removeLocalFile } from '../utils/helper.js';
 import Chat from './../model/chat.model.js';
-import ApiError from "../utils/ApiError.js";
 import ChatMessage from './../model/chatMessage.model.js';
-import uploadFiles from './../utils/cloudinary.js';
 // user has one to one chat like simple chat ( user1 to user2 )   `` using comman functionality
 
 // user was chating on one to many like group chat ( user1 to user2, user3, user4) `` using lookup functionality
@@ -45,8 +43,8 @@ const getAllMessage = asyncHandler(async (req, res) => {
 
   const chat = await Chat.findById(chatId);
 
-//   console.log(`chat ${chat}`);
-  
+//    (`chat ${chat}`);
+
 
   if (!chat) {
     throw new ApiError(404, "Chat not found");
@@ -63,8 +61,8 @@ const getAllMessage = asyncHandler(async (req, res) => {
     { $sort: { createdAt: -1 } },
   ]);
 
-//   console.log(`messages :${messages}`);
-  
+//    (`messages :${messages}`);
+
 
   return res
     .status(200)
@@ -76,11 +74,11 @@ const sendMessage = asyncHandler(async (req, res) => {
   const { chatId } = req.params;
   const { content } = req.body;
 
-//   console.log(`chatid ${chatId}`);
-//   console.log(`chatid type ${typeof(chatId)}`);
-//   console.log(`req.body : ${req.body}`);
-//   console.log(`req.body type : ${typeof(req.body)}`);
-  
+//    (`chatid ${chatId}`);
+//    (`chatid type ${typeof(chatId)}`);
+//    (`req.body : ${req.body}`);
+//    (`req.body type : ${typeof(req.body)}`);
+
 
   if (!content?.trim()) {
     throw new ApiError(400, "Message content required");
@@ -139,7 +137,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 
 const deleteMessage = asyncHandler(async(req,res)=>{
     const { chatId, messageId } = req.params
-    
+
     const chat = await Chat.findOne(
         {
             _id : new mongoose.Types.ObjectId(chatId),
@@ -199,13 +197,13 @@ const deleteMessage = asyncHandler(async(req,res)=>{
 // const getUsersWithMessages = asyncHandler(async (req, res) => {
 //   const currentUserId = req.user._id;
 
-//   console.log("Current User ID:", currentUserId.toString());
+//    ("Current User ID:", currentUserId.toString());
 
 //   const chats = await Chat.find({
 //     participants: currentUserId,
 //   }).lean();
 
-//   console.log("Chats found:", chats.length);
+//    ("Chats found:", chats.length);
 
 //   if (!chats.length) {
 //     return res.status(200).json(
@@ -225,7 +223,7 @@ const deleteMessage = asyncHandler(async(req,res)=>{
 
 //   const otherUserIds = Array.from(otherUserIdsSet);
 
-//   console.log("Other User IDs:", otherUserIds);
+//    ("Other User IDs:", otherUserIds);
 
 //   if (!otherUserIds.length) {
 //     return res.status(200).json(
@@ -239,7 +237,7 @@ const deleteMessage = asyncHandler(async(req,res)=>{
 //     .select("username email avatar online lastSeen")
 //     .lean();
 
-//   console.log("Users fetched:", users.length);
+//    ("Users fetched:", users.length);
 
 //   return res.status(200).json(
 //     new ApiRespose(200, users, "Users with messages fetched")
@@ -251,14 +249,12 @@ const deleteMessage = asyncHandler(async(req,res)=>{
 //     const attacheMent = req.files
 
 
-    
+
 
 // })
 
 
 export {
-    getAllMessage,
-    sendMessage,
-    deleteMessage,
-    // getUsersWithMessages
-}
+    deleteMessage, getAllMessage,
+    sendMessage
+};
