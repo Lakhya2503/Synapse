@@ -1,4 +1,3 @@
-import { log } from "winston";
 import User from "../model/user.model.js"
 import ApiError from "../utils/ApiError.js"
 import jwt from 'jsonwebtoken'
