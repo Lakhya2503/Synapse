@@ -500,29 +500,39 @@ const ChatList = ({
       </div>
 
       {/* Add custom animations */}
-      <style jsx>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-3px); }
-        }
-        @keyframes ping {
-          75%, 100% { transform: scale(2); opacity: 0; }
-        }
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-        .animate-float {
-          animation: float 2s ease-in-out infinite;
-        }
-        .animate-ping {
-          animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-      `}</style>
+
     </div>
   );
 };
 
 export default ChatList;
+
+
+
+
+
+
+
+
+
+//  <style jsx>{`
+//         @keyframes spin {
+//           to { transform: rotate(360deg); }
+//         }
+//         @keyframes float {
+//           0%, 100% { transform: translateY(0px); }
+//           50% { transform: translateY(-3px); }
+//         }
+//         @keyframes ping {
+//           75%, 100% { transform: scale(2); opacity: 0; }
+//         }
+//         .animate-spin {
+//           animation: spin 1s linear infinite;
+//         }
+//         .animate-float {
+//           animation: float 2s ease-in-out infinite;
+//         }
+//         .animate-ping {
+//           animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+//         }
+//       `}</style>

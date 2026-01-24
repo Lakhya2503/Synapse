@@ -3,46 +3,29 @@ import ApiError from "../utils/ApiError.js"
 import jwt from 'jsonwebtoken'
 
 export const verifyAuthUser = async (req, _, next) => {
+  const token =
+    req.cookies?.accessToken ||
+    req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    throw new ApiError(401, "Unauthorized request");
+  }
+
   try {
-    // 1️⃣ Read token from Authorization header
-    const authHeader = req.headers.authorization;
-
-    console.log(req);
-
-
-    console.log('authHeader:', authHeader.accessToken);
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new ApiError(401, "Access token not provided");
-    }
-
-    const accessToken = authHeader.split(" ")[1];
-
-    log('accessToken:', accessToken);
-
-    // 2️⃣ Verify token
-    const decoded = jwt.verify(
-      accessToken,
-      process.env.ACCESS_TOKEN_SECRET
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const user = await User.findById(decodedToken?._id).select(
+      "-password -refreshToken -emailVerificationToken -emailVerificationExpiry"
     );
-
-    if (!decoded?.id) {
+    if (!user) {
+      // Client should make a request to /api/v1/users/refresh-token if they have refreshToken present in their cookie
+      // Then they will get a new access token which will allow them to refresh the access token without logging out the user
       throw new ApiError(401, "Invalid access token");
     }
-
-    // 3️⃣ Fetch user
-    const user = await User.findById(decoded.id).select(
-      "-password -refreshToken"
-    );
-
-    if (!user) {
-      throw new ApiError(401, "User not found");
-    }
-
-    // 4️⃣ Attach user to request
     req.user = user;
     next();
   } catch (error) {
-    next(new ApiError(401, error.message || "Unauthorized"));
+    // Client should make a request to /api/v1/users/refresh-token if they have refreshToken present in their cookie
+    // Then they will get a new access token which will allow them to refresh the access token without logging out the user
+    throw new ApiError(401, error?.message || "Invalid access token");
   }
 };
