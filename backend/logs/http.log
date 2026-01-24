@@ -29200,3 +29200,4 @@
 {"level":"info","message":"🚀 Server is running on http://localhost:5002"}
 {"level":"info","message":"✅ CORS Origins: http://localhost:5173"}
 {"level":"info","message":"✅ Using MongoDB for session storage"}
+{"level":"info","message":"Shutting down server..."}

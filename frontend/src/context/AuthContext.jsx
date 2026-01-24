@@ -1,5 +1,5 @@
 import { Loader } from 'lucide-react';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   userLogin,
@@ -25,48 +25,109 @@ export const AuthProvider = ({ children }) => {
 
   const navigate = useNavigate();
 
+  /* ---------- Refresh Token Function ---------- */
+  const refreshAuthToken = useCallback(async () => {
+    try {
+      const response = await refreshToken();
+      const { accessToken } = response.data;
+
+      if (accessToken) {
+        setToken(accessToken);
+        LocalStorage.set('token', accessToken);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    }
+  }, []);
+
+
+
+
   /* ---------- Initialize Auth ---------- */
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedUser = LocalStorage.get('user');
       const storedToken = LocalStorage.get('token');
+      const storedUser = LocalStorage.get('user');
 
-      if (storedToken) {
+      // If we have both token and user in localStorage, restore them immediately
+      if (storedToken && storedUser) {
+        // Set state from localStorage for instant UI
+        setToken(storedToken);
+        setUser(storedUser);
+        console.log(storedUser);
+
+
+        // Verify token is still valid by making an API call
         try {
-          // Set token immediately for API calls
-          setToken(storedToken);
-
-          // Try to fetch fresh user data
           const response = await getCurrentUser();
           if (response.data) {
-            const freshUser = response.data;
+            // Update with fresh user data
+            const freshUser = response.data.data;
             setUser(freshUser);
             LocalStorage.set('user', freshUser);
-          } else if (storedUser) {
-            // Fallback to stored user if API fails
-            setUser(storedUser);
           }
         } catch (error) {
-          console.warn('Failed to fetch user data:', error);
+          console.warn('Token validation failed:', error);
 
-          // If token is invalid, clear everything
+          // If token is invalid (401), try to refresh it
           if (error.response?.status === 401) {
-            LocalStorage.remove('user');
+            const refreshSuccess = await refreshAuthToken();
+            if (!refreshSuccess) {
+              // Token refresh failed, clear auth and redirect to login
+              LocalStorage.remove('user');
+              LocalStorage.remove('token');
+              setUser(null);
+              setToken(null);
+              navigate('/login');
+            } else {
+              // Token refreshed successfully, fetch user again
+              try {
+                const newResponse = await getCurrentUser();
+                if (newResponse.data) {
+                  setUser(newResponse.data);
+                  LocalStorage.set('user', newResponse.data);
+                }
+              } catch (retryError) {
+                console.error('Failed to fetch user after token refresh:', retryError);
+              }
+            }
+          }
+          // For other errors (network issues, server down), keep using stored user
+        }
+      }
+      // If we have token but no user data, fetch user
+      else if (storedToken) {
+        setToken(storedToken);
+        try {
+          const response = await getCurrentUser();
+          if (response.data) {
+            const user = response.data;
+            setUser(user);
+            LocalStorage.set('user', user);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user with token:', error);
+          if (error.response?.status === 401) {
+            // Token is invalid, clear it
             LocalStorage.remove('token');
-            setUser(null);
             setToken(null);
-          } else if (storedUser) {
-            // Use stored user as fallback for network errors
-            setUser(storedUser);
+            navigate('/login');
           }
         }
+      }
+      // No auth data found, redirect to login
+      else {
+        navigate('/login');
       }
 
       setIsInitializing(false);
     };
 
     initializeAuth();
-  }, []);
+  }, [navigate, refreshAuthToken]);
 
   /* ---------- Login ---------- */
   const login = async (payload) => {
@@ -79,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       null,
       (res) => {
         const { user, accessToken } = res.data;
-        console.log(`accessToken: ${accessToken}`);
+        console.log(user);
 
 
         setUser(user);
@@ -101,6 +162,8 @@ export const AuthProvider = ({ children }) => {
       }
     ).finally(() => setLoading(false));
   };
+
+  console.log(user);
 
   /* ---------- Register ---------- */
   const register = async (payload) => {
@@ -150,11 +213,6 @@ export const AuthProvider = ({ children }) => {
         // Clear localStorage
         LocalStorage.remove('user');
         LocalStorage.remove('token');
-
-        // Clear any axios headers
-        if (window.axios) {
-          delete window.axios.defaults.headers.common['Authorization'];
-        }
 
         // Redirect to login
         navigate('/login');
@@ -217,28 +275,10 @@ export const AuthProvider = ({ children }) => {
     ).finally(() => setLoading(false));
   };
 
-  /* ---------- Refresh Token ---------- */
-  const refreshAuthToken = async () => {
-    try {
-      const response = await refreshToken();
-      const { accessToken } = response.data;
-
-      if (accessToken) {
-        setToken(accessToken);
-        LocalStorage.set('token', accessToken);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      return false;
-    }
-  };
-
   /* ---------- Update User Profile ---------- */
   const updateProfile = async (updates) => {
     // This would call your update APIs (username, fullName, avatar)
-    // Implementation depends on your specific update functions
+    // After successful update, update both state and localStorage
     console.log('Profile updates:', updates);
   };
 
@@ -263,7 +303,7 @@ export const AuthProvider = ({ children }) => {
       refreshAuthToken,
       updateProfile
     }),
-    [user, token, otp, loading, isAuthenticated]
+    [user, token, otp, loading, isAuthenticated, refreshAuthToken]
   );
 
   /* ---------- Loading State ---------- */
