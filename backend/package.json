@@ -5,9 +5,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon -r dotenv/config src/index.js",
-     "start": "node -r dotenv/config src/index.js",
-     "type" : "module"
-  },  
+    "start": "node -r dotenv/config src/index.js",
+    "type": "module"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -16,6 +16,7 @@
     "@faker-js/faker": "^10.1.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.8.0",
+    "connect-redis": "^9.0.0",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -35,6 +36,7 @@
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
     "prettier": "^3.6.2",
+    "redis": "^5.10.0",
     "request-ip": "^3.3.0",
     "socket.io": "^4.8.1",
     "winston": "^3.19.0"
