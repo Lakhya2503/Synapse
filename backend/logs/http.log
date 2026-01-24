@@ -29160,3 +29160,4 @@
 {"level":"http","message":"::1 DELETE /api/v1/synapse/chats/leave/group/6971d30d030689fab318b796 200 - 73.168 ms"}
 {"level":"http","message":"::1 GET /api/v1/synapse/chats 200 - 28.288 ms"}
 {"level":"http","message":"::1 GET /api/v1/synapse/chats 304 - 32.233 ms"}
+{"level":"http","message":"::1 GET /favicon.ico 404 - 3.770 ms"}
