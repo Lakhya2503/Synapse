@@ -6,10 +6,14 @@ export const verifyAuthUser = async (req, _, next) => {
     
     try {
         const incommingToken = req.cookies?.accessToken
+        
+        console.log(`incoming token : ${incommingToken}`);
     
         if (!incommingToken) {
             throw new ApiError(404, "incomming token not found")
         }
+
+        
     
         const token = jwt.verify(incommingToken, process.env.ACCESS_TOKEN_SECRET);
         if (!token) {

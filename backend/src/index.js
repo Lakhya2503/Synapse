@@ -16,13 +16,11 @@ connectDB()
 
     httpServer.listen(PORT, '0.0.0.0', () => {
       logger.info(`
-╔══════════════════════════════════════╗
-║         🚀 Server Started           ║
-╠══════════════════════════════════════╣
-║ Port:        ${PORT}${' '.repeat(Math.max(0, 22 - PORT.toString().length))}║
-║ Environment: ${process.env.NODE_ENV || 'development'}${' '.repeat(Math.max(0, 22 - (process.env.NODE_ENV || 'development').length))}║
-║ URL:         http://localhost:${PORT}${' '.repeat(Math.max(0, 22 - (8 + PORT.toString().length)))}║
-╚══════════════════════════════════════╝
+  
+ Port:        ${PORT}${' '.repeat(Math.max(0, 22 - PORT.toString().length))}
+Environment: ${process.env.NODE_ENV || 'development'}${' '.repeat(Math.max(0, 22 - (process.env.NODE_ENV || 'development').length))}
+ URL:         http://localhost:${PORT}${' '.repeat(Math.max(0, 22 - (8 + PORT.toString().length)))}
+
       `)
 
       // Log CORS origins
