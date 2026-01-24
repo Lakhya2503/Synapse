@@ -15,22 +15,28 @@ connectDB()
     logger.info('✅ Database connected successfully')
 
     httpServer.listen(PORT, '0.0.0.0', () => {
-      logger.info(`🚀 Server started on port ${PORT}`)
-      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+      logger.info(`
+╔══════════════════════════════════════╗
+║         🚀 Server Started           ║
+╠══════════════════════════════════════╣
+║ Port:        ${PORT}${' '.repeat(Math.max(0, 22 - PORT.toString().length))}║
+║ Environment: ${process.env.NODE_ENV || 'development'}${' '.repeat(Math.max(0, 22 - (process.env.NODE_ENV || 'development').length))}║
+║ URL:         http://localhost:${PORT}${' '.repeat(Math.max(0, 22 - (8 + PORT.toString().length)))}║
+╚══════════════════════════════════════╝
+      `)
 
+      // Log CORS origins
       if (process.env.CORS_ORIGIN) {
         const origins = process.env.CORS_ORIGIN.split(',').map(o => o.trim())
         logger.info(`✅ CORS Origins: ${origins.join(', ')}`)
       }
 
+      // Log session store info
       if (process.env.MONGODB_URI) {
         logger.info('✅ Using MongoDB for session storage')
-      } else {
-        logger.warn('⚠️ Using MemoryStore (add MONGODB_URI for production)')
+      } else if (isProduction) {
+        logger.warn('⚠️ Using MemoryStore in production')
       }
-
-      logger.info(`📍 Local: http://localhost:${PORT}`)
-      logger.info(`📊 Health: http://localhost:${PORT}/health`)
     })
 
     // Handle server errors
@@ -49,28 +55,19 @@ connectDB()
     process.exit(1)
   })
 
-// Handle shutdown signals
-const gracefulShutdown = (signal) => {
-  logger.info(`${signal} received. Shutting down...`)
+// Graceful shutdown
+const gracefulShutdown = () => {
+  logger.info('Shutting down server...')
   httpServer.close(() => {
     logger.info('Server closed')
     process.exit(0)
   })
 
   setTimeout(() => {
-    logger.error('Force shutdown')
+    logger.error('Force shutdown after timeout')
     process.exit(1)
   }, 10000)
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
-process.on('SIGINT', () => gracefulShutdown('SIGINT'))
-
-// Handle uncaught errors
-process.on('uncaughtException', (error) => {
-  logger.error('🚨 Uncaught Exception:', error)
-})
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason)
-})
+process.on('SIGTERM', gracefulShutdown)
+process.on('SIGINT', gracefulShutdown)

@@ -5,12 +5,13 @@ import { createServer } from 'http'
 import { Server } from 'socket.io'
 import rateLimit from 'express-rate-limit'
 import session from 'express-session'
-import MongoStore from 'connect-mongo'  // ← CHANGE: Use MongoDB instead of Redis
+import MongoStore from 'connect-mongo'
 import passport from 'passport'
 
 import authRouter from './routes/auth.route.js'
 import chatRouter from './routes/chat.route.js'
 import messageRouter from './routes/message.route.js'
+import healthcheckRouter from './routes/healthcheck.routes.js'
 import { intializeSocketIO } from './socket/index.js'
 
 const app = express()
@@ -21,25 +22,24 @@ const isProduction = process.env.NODE_ENV === 'production'
 // Required for Render / proxies
 app.set('trust proxy', 1)
 
-// ========== 2. MONGODB SESSION STORE (FIXED) ==========
-// Use MongoDB for sessions (same as your app data)
+// ========== 2. MONGODB SESSION STORE ==========
 let sessionStore = null
 
 try {
   if (process.env.MONGODB_URI) {
     sessionStore = MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI, // Same MongoDB as your app
-      collectionName: 'user_sessions', // Separate collection
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions',
       ttl: 14 * 24 * 60 * 60, // 14 days
       autoRemove: 'native',
-      touchAfter: 24 * 3600 // Only update once per day
+      touchAfter: 24 * 3600
     })
     console.log('✅ Using MongoDB for session storage')
   } else {
     console.warn('⚠️ MONGODB_URI not found, using MemoryStore')
   }
 } catch (error) {
-  console.warn('Failed to create MongoDB session store:', error.message)
+  console.warn('MongoDB session store error:', error.message)
 }
 
 // ========== 3. HTTP + SOCKET.IO ==========
@@ -69,7 +69,8 @@ const io = new Server(httpServer, {
   cors: {
     origin: corsOrigins,
     credentials: true,
-  }
+  },
+  transports: ['websocket', 'polling']
 })
 
 app.set('io', io)
@@ -77,6 +78,8 @@ app.set('io', io)
 // Initialize Socket.IO if function exists
 if (typeof intializeSocketIO === 'function') {
   intializeSocketIO(io)
+} else {
+  console.warn('Socket.IO initialization function not found')
 }
 
 // ========== 4. MIDDLEWARE SETUP ==========
@@ -92,10 +95,15 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isProduction ? 100 : 1000,
-  message: 'Too many requests from this IP, please try again later.',
+  message: {
+    success: false,
+    error: 'Too many requests, please try again later'
+  },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/health'
+  skip: (req) => {
+    return req.path === '/health' || req.path === '/'
+  }
 })
 app.use(limiter)
 
@@ -106,40 +114,42 @@ app.use(cookieParser())
 
 // Sessions with MongoDB
 const sessionConfig = {
-  secret: process.env.EXPRESS_SESSION_SECRET || 'dev-secret-change-in-production',
+  secret: process.env.EXPRESS_SESSION_SECRET || 'dev-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
-  store: sessionStore,
   cookie: {
     secure: isProduction,
     httpOnly: true,
-    maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: isProduction ? 'none' : 'lax'
   }
 }
 
-// Warn if using MemoryStore in production
-if (isProduction && !sessionStore) {
-  console.error('❌ WARNING: Using MemoryStore in production!')
-  console.error('❌ Sessions will be lost on server restart')
+// Add store if available
+if (sessionStore) {
+  sessionConfig.store = sessionStore
 }
 
 app.use(session(sessionConfig))
+
+// Warn if using MemoryStore in production
+if (isProduction && !sessionStore) {
+  console.warn('⚠️ WARNING: Using MemoryStore in production! Add MONGODB_URI')
+}
 
 app.use(passport.initialize())
 app.use(passport.session())
 
 // ========== 5. ROUTES ==========
 
-// Health check
+// Health check (REQUIRED for Render)
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Server is healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    sessionStore: sessionStore ? 'MongoDB' : 'MemoryStore'
+    environment: process.env.NODE_ENV || 'development'
   })
 })
 
@@ -150,15 +160,9 @@ app.get('/api/status', (req, res) => {
     message: 'Synapse API is running',
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
-    sessionStore: sessionStore ? 'MongoDB' : 'MemoryStore',
-    corsOrigins: corsOrigins
+    sessionStore: sessionStore ? 'MongoDB' : 'MemoryStore'
   })
 })
-
-// Main routes
-app.use('/api/v1/synapse', authRouter)
-app.use('/api/v1/synapse/chats', chatRouter)
-app.use('/api/v1/synapse/messages', messageRouter)
 
 // Root route
 app.get('/', (req, res) => {
@@ -171,27 +175,38 @@ app.get('/', (req, res) => {
   })
 })
 
-// 404 Handler
-app.use('*', (req, res) => {
+// Main API routes
+app.use('/api/v1/synapse', authRouter)
+app.use('/api/v1/synapse/chats', chatRouter)
+app.use('/api/v1/synapse/messages', messageRouter)
+app.use("/api/v1/healthcheck", healthcheckRouter);
+
+// ========== 6. 404 HANDLER (FIXED - No '*') ==========
+// This MUST come after all other routes
+app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route ${req.originalUrl} not found`
+    message: `Route ${req.originalUrl} not found`,
+    suggestion: 'Check available endpoints at /api/status'
   })
 })
 
-// Global error handler
+// ========== 7. ERROR HANDLER ==========
+// This MUST come after 404 handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message)
+  console.error('Server Error:', err.message)
 
-  const statusCode = err.status || 500
+  const statusCode = err.status || err.statusCode || 500
   const message = isProduction && statusCode === 500
     ? 'Internal server error'
-    : err.message
+    : err.message || 'Something went wrong'
 
   res.status(statusCode).json({
     success: false,
-    error: message
+    error: message,
+    ...(isProduction ? {} : { stack: err.stack })
   })
 })
 
+// ========== 8. EXPORTS ==========
 export { httpServer, app }
