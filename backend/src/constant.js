@@ -36,6 +36,10 @@ const ChatEventEnum = Object.freeze({
   MESSAGE_DELETE_EVENT: "messageDeleted",
   USER_ONLINE_EVENT: "user_online",
   USER_OFFLINE_EVENT: "user_offline",
+  BLOCKCHAT : "block_chat",
+  UNBLOCKCHAT : "un_block_chat",
+  ARCHEVIDCHAT : "archived_chat",
+  UNARCHIVEDCHAT : "un_archived_chat",
 });
 
 const AvailableChatEvent = Object.values(ChatEventEnum);

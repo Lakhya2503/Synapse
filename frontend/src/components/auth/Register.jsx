@@ -1,9 +1,9 @@
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/20/solid";
-import { useState } from "react";
-import { FaCamera, FaGithub, FaGoogle, FaUser } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { userRegister } from "../../api";
+import { useState, useEffect } from "react";
+import { FaGoogle, FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash, FaCamera, FaGithub, FaCheck, FaExclamationTriangle } from "react-icons/fa";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { RegisterImage } from "../../../public";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -11,14 +11,28 @@ const Register = () => {
     email: "",
     password: "",
   });
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [avatars, setAvatars] = useState([]);
+  const [avatar, setAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [previewUrls, setPreviewUrls] = useState([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [hoverStates, setHoverStates] = useState({
+    submit: false,
+    google: false,
+    github: false,
+  });
 
-  const { loginWithGoogle, loginWithGithub } = useAuth();
+  const { register, loginWithGoogle, loginWithGithub } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage);
+      setTimeout(() => setSuccessMessage(""), 5000);
+    }
+  }, [location.state]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,391 +40,360 @@ const Register = () => {
     if (error) setError("");
   };
 
-  const handleConfirmPasswordChange = (e) => {
-    setConfirmPassword(e.target.value);
-    if (error) setError("");
-  };
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size must be less than 5MB");
+        return;
+      }
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files).slice(0, 2); // Limit to 2 files
-    setAvatars(files);
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setError("Please upload a valid image file (JPG, PNG, GIF, WebP)");
+        return;
+      }
 
-    // Create preview URLs
-    const urls = files.map(file => URL.createObjectURL(file));
-    setPreviewUrls(urls);
-  };
-
-  const removeAvatar = (index) => {
-    const newAvatars = [...avatars];
-    const newPreviews = [...previewUrls];
-
-    // Revoke the object URL to prevent memory leaks
-    URL.revokeObjectURL(newPreviews[index]);
-
-    newAvatars.splice(index, 1);
-    newPreviews.splice(index, 1);
-
-    setAvatars(newAvatars);
-    setPreviewUrls(newPreviews);
+      setAvatar(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      if (error) setError("");
+    }
   };
 
   const validateForm = () => {
-    if (!form.username || !form.email || !form.password) {
-      setError("Please fill in all required fields");
-      return false;
-    }
-
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      return false;
-    }
-
-    if (form.password !== confirmPassword) {
-      setError("Passwords do not match");
-      return false;
-    }
-
-    if (!form.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setError("Please enter a valid email address");
-      return false;
-    }
-
-    return true;
+    if (!form.username.trim()) return "Username is required";
+    if (form.username.length < 3) return "Username must be at least 3 characters";
+    if (!form.email.trim()) return "Email is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Invalid email format";
+    if (!form.password) return "Password is required";
+    if (form.password.length < 6) return "Password must be at least 6 characters";
+    return "";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     try {
       setLoading(true);
       setError("");
 
       const formData = new FormData();
-      formData.append("username", form.username);
-      formData.append("email", form.email);
-      formData.append("password", form.password);
+      formData.append('username', form.username);
+      formData.append('email', form.email);
+      formData.append('password', form.password);
+      if (avatar) {
+        formData.append('avatar', avatar);
+      }
 
-      avatars.forEach((file) => {
-        formData.append("avatar", file);
+      await register(formData);
+      navigate('/login', {
+        state: { successMessage: "Registration successful! Please login." }
       });
-
-      const res = await userRegister(formData);
-       (res.data);
-
-      // Redirect to login page after successful registration
-      navigate("/login", { state: { message: "Registration successful! Please login." } });
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Registration failed. Please try again.");
+      setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = async (provider) => {
+  const handleLoginWithGoogle = async () => {
     try {
       setLoading(true);
       setError("");
-      if (provider === "google") {
-        await loginWithGoogle();
-      } else {
-        await loginWithGithub();
-      }
+      await loginWithGoogle();
     } catch (err) {
-      setError(err.message || `Failed to login with ${provider}`);
+      setError(err.message || "Google login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoginWithGitHub = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      await loginWithGithub();
+    } catch (err) {
+      setError(err.message || "GitHub login failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex h-screen w-screen bg-gray-50 text-gray-800">
-      {/* Left Panel - Chat Illustration */}
-      <div className="hidden lg:flex flex-1 flex-col justify-center items-center p-12 bg-gradient-to-br from-emerald-50 to-teal-50">
-        <div className="max-w-2xl text-center">
-          <ChatBubbleLeftRightIcon className="h-32 w-32 text-emerald-600 mx-auto mb-8" />
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Join SYNAPSE Today
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Create your account to start connecting, chatting, and collaborating with your team in real-time.
-            Experience secure messaging with end-to-end encryption.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-4 md:p-6">
+      <div className="w-full max-w-4xl flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-10">
 
-          <div className="grid grid-cols-2 gap-6 mt-12">
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
-              <div className="h-10 w-10 bg-emerald-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-emerald-600 font-bold">🔒</span>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Secure & Private</h3>
-              <p className="text-gray-600 text-sm">End-to-end encrypted messages</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
-              <div className="h-10 w-10 bg-emerald-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-emerald-600 font-bold">👥</span>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Team Collaboration</h3>
-              <p className="text-gray-600 text-sm">Group chats and channels</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
-              <div className="h-10 w-10 bg-emerald-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-emerald-600 font-bold">📁</span>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">File Sharing</h3>
-              <p className="text-gray-600 text-sm">Share files and media easily</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
-              <div className="h-10 w-10 bg-emerald-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-emerald-600 font-bold">🌐</span>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Cross Platform</h3>
-              <p className="text-gray-600 text-sm">Access from any device</p>
-            </div>
-          </div>
+        {/* Left Side - Professional Sized Image */}
+        <div className="relative h-full max-w-lg">
+          <div className="absolute -inset-4 bg-gradient-to-r from-indigo-400/20 to-cyan-400/20 rounded-2xl blur-xl"></div>
+          <img
+            src={RegisterImage}
+            alt="Secure Registration Illustration"
+            className="relative h-auto w-full border-4 border-white/90 rounded-2xl shadow-xl shadow-indigo-500/20"
+          />
+          <div className="absolute -bottom-3 -right-3 h-24 w-24 bg-gradient-to-br from-cyan-400/30 to-indigo-400/30 rounded-full blur-md"></div>
+          <div className="absolute -top-3 -left-3 h-20 w-20 bg-gradient-to-tr from-purple-400/30 to-pink-400/30 rounded-full blur-md"></div>
         </div>
-      </div>
 
-      {/* Right Panel - Registration Form */}
-      <div className="flex-1 flex flex-col justify-center items-center p-8 overflow-y-auto">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-10">
+        {/* Right Side - Professional Sized Form */}
+        <div className="w-full h-full max-w-md">
+          {/* Header with professional spacing */}
+          <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center">
-                <ChatBubbleLeftRightIcon className="h-7 w-7 text-white" />
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-lg blur opacity-30"></div>
+                <div className="relative h-10 w-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-md">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                </div>
               </div>
-              <h1 className="text-4xl font-bold text-gray-900">SYNAPSE</h1>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
+                Synapse
+              </h1>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-              Create your account
-            </h2>
-            <p className="text-gray-600">Join SYNAPSE to start collaborating</p>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Create Account</h2>
+            <p className="text-gray-600 text-sm">Join thousands of communicators</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                {error}
-              </div>
-            )}
+          {/* Form Card */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-white/60 p-6 md:p-7 relative overflow-hidden">
+            {/* Gradient background elements */}
+            <div className="absolute -top-16 -right-16 h-40 w-40 bg-gradient-to-br from-indigo-200/20 to-cyan-200/20 rounded-full"></div>
+            <div className="absolute -bottom-16 -left-16 h-40 w-40 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full"></div>
 
-            {/* Username */}
-            <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium text-gray-700">
-                Username *
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                  <FaUser className="h-5 w-5" />
-                </div>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  placeholder="Choose a username"
-                  value={form.username}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-200 shadow-sm"
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="Enter your email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                autoComplete="email"
-                className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-200 shadow-sm"
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password *
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Create a password (min. 6 characters)"
-                value={form.password}
-                onChange={handleChange}
-                required
-                minLength={6}
-                className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-200 shadow-sm"
-              />
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                Confirm Password *
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={handleConfirmPasswordChange}
-                required
-                className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-200 shadow-sm"
-              />
-            </div>
-
-            {/* Profile Pictures */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Profile Pictures (Optional, max 2)
-              </label>
-              <div className="space-y-4">
-                {/* File Input */}
-                <label className="block cursor-pointer">
-                  <div className="flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-dashed border-gray-300 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition duration-200">
-                    <FaCamera className="h-5 w-5 text-gray-400" />
-                    <span className="text-gray-600 font-medium">
-                      {avatars.length > 0
-                        ? `${avatars.length} file(s) selected`
-                        : "Click to upload images"}
+            <div className="relative z-10">
+              {/* Messages with professional spacing */}
+              {successMessage && (
+                <div className="mb-4 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg">
+                  <p className="text-emerald-700 text-sm flex items-center gap-2">
+                    <span className="h-5 w-5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
+                      <FaCheck className="text-white text-xs" />
                     </span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    disabled={avatars.length >= 2}
-                  />
-                </label>
+                    {successMessage}
+                  </p>
+                </div>
+              )}
 
-                {/* Image Previews */}
-                {previewUrls.length > 0 && (
-                  <div className="grid grid-cols-2 gap-4">
-                    {previewUrls.map((url, index) => (
-                      <div key={index} className="relative group">
+              {error && (
+                <div className="mb-4 p-3 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-lg">
+                  <p className="text-rose-700 text-sm flex items-center gap-2">
+                    <span className="h-5 w-5 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full flex items-center justify-center">
+                      <FaExclamationTriangle className="text-white text-xs" />
+                    </span>
+                    {error}
+                  </p>
+                </div>
+              )}
+
+              {/* Form with professional spacing */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Avatar Upload */}
+                <div className="flex justify-center mb-4">
+                  <div className="relative">
+                    <div className="h-24 w-24 rounded-full border-3 border-white bg-gradient-to-br from-indigo-100 to-cyan-100 shadow-md flex items-center justify-center overflow-hidden">
+                      {avatarPreview ? (
                         <img
-                          src={url}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-40 object-cover rounded-xl border border-gray-200 shadow-sm"
+                          src={avatarPreview}
+                          alt="Avatar preview"
+                          className="h-full w-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={() => removeAvatar(index)}
-                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          ×
-                        </button>
-                        <div className="text-xs text-gray-500 text-center mt-1">
-                          {avatars[index]?.name || `Image ${index + 1}`}
+                      ) : (
+                        <div className="text-indigo-300">
+                          <FaUser className="h-10 w-10" />
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                    <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 h-10 w-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center cursor-pointer shadow-md hover:shadow-lg hover:scale-110 transition-all duration-200">
+                      <FaCamera className="h-4 w-4 text-white" />
+                      <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
-                )}
+                </div>
 
-                <p className="text-xs text-gray-500">
-                  You can upload up to 2 images. Supported formats: JPG, PNG, GIF.
+                {/* Username Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Username
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-600 transition-colors">
+                      <FaUser className="h-4 w-4" />
+                    </div>
+                    <input
+                      type="text"
+                      name="username"
+                      value={form.username}
+                      onChange={handleChange}
+                      placeholder="john_doe"
+                      className="w-full pl-10 pr-4 py-3 text-sm bg-white/50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition-all duration-200 group-hover:border-indigo-400"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Email Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-600 transition-colors">
+                      <FaEnvelope className="h-4 w-4" />
+                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="john@example.com"
+                      className="w-full pl-10 pr-4 py-3 text-sm bg-white/50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition-all duration-200 group-hover:border-indigo-400"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-600 transition-colors">
+                      <FaLock className="h-4 w-4" />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-3 text-sm bg-white/50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition-all duration-200 group-hover:border-indigo-400"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                    >
+                      {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 ml-1">Minimum 6 characters with letters and numbers</p>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loading || !form.username || !form.email || !form.password}
+                  onMouseEnter={() => setHoverStates(prev => ({ ...prev, submit: true }))}
+                  onMouseLeave={() => setHoverStates(prev => ({ ...prev, submit: false }))}
+                  className="w-full py-3 bg-gradient-to-br from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 relative overflow-hidden group mt-2"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br from-indigo-600 to-cyan-600 transition-opacity duration-300 ${
+                    hoverStates.submit ? 'opacity-100' : 'opacity-0'
+                  }`}></div>
+                  <span className="relative flex items-center justify-center gap-2">
+                    {loading ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Creating Account...
+                      </>
+                    ) : (
+                      <>
+                        Create Account
+                        <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </>
+                    )}
+                  </span>
+                </button>
+              </form>
+
+              {/* Divider with professional spacing */}
+              <div className="my-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300/60"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-3 bg-white/90 text-gray-500 font-medium">Or sign up with</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Login Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleLoginWithGoogle}
+                  disabled={loading}
+                  onMouseEnter={() => setHoverStates(prev => ({ ...prev, google: true }))}
+                  onMouseLeave={() => setHoverStates(prev => ({ ...prev, google: false }))}
+                  className="flex-1 py-2.5 bg-white border border-gray-300/60 rounded-lg hover:bg-gray-50 hover:border-indigo-400/60 hover:shadow-sm disabled:opacity-50 transition-all duration-200 relative group"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-r from-indigo-50/30 to-cyan-50/30 transition-opacity duration-300 ${
+                    hoverStates.google ? 'opacity-100' : 'opacity-0'
+                  }`}></div>
+                  <span className="relative flex items-center justify-center gap-2.5">
+                    <FaGoogle className="h-4 w-4 text-gray-700 group-hover:text-indigo-600 transition-colors" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                      Google
+                    </span>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLoginWithGitHub}
+                  disabled={loading}
+                  onMouseEnter={() => setHoverStates(prev => ({ ...prev, github: true }))}
+                  onMouseLeave={() => setHoverStates(prev => ({ ...prev, github: false }))}
+                  className="flex-1 py-2.5 bg-white border border-gray-300/60 rounded-lg hover:bg-gray-50 hover:border-gray-800/60 hover:shadow-sm disabled:opacity-50 transition-all duration-200 relative group"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-r from-gray-50/30 to-gray-100/30 transition-opacity duration-300 ${
+                    hoverStates.github ? 'opacity-100' : 'opacity-0'
+                  }`}></div>
+                  <span className="relative flex items-center justify-center gap-2.5">
+                    <FaGithub className="h-4 w-4 text-gray-700 group-hover:text-gray-900 transition-colors" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                      GitHub
+                    </span>
+                  </span>
+                </button>
+              </div>
+
+              {/* Sign In Link */}
+              <div className="mt-6 pt-5 border-t border-gray-300/60 text-center">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="font-semibold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent hover:from-indigo-700 hover:to-cyan-700 transition-all relative group"
+                  >
+                    Sign In
+                    <span className="absolute -bottom-0.5 left-0 w-0 group-hover:w-full h-0.5 bg-gradient-to-r from-indigo-600 to-cyan-600 transition-all duration-300"></span>
+                  </button>
                 </p>
               </div>
             </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || !form.username || !form.email || !form.password || !confirmPassword}
-              className={`
-                w-full px-4 py-3 rounded-xl text-white font-semibold transition duration-200 shadow-lg
-                ${loading || !form.username || !form.email || !form.password || !confirmPassword
-                  ? "bg-emerald-400 cursor-not-allowed"
-                  : "bg-emerald-600 hover:bg-emerald-700"
-                }
-              `}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Creating account...
-                </span>
-              ) : (
-                "Create Account"
-              )}
-            </button>
-          </form>
-
-          {/* Social Login Divider */}
-          <div className="my-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-gray-50 text-gray-500">
-                  Or sign up with
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleSocialLogin("google")}
-                disabled={loading}
-                type="button"
-                className="flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition duration-200 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                <FaGoogle className="h-5 w-5 text-red-600" />
-                <span className="font-medium text-gray-700">Google</span>
-              </button>
-
-              <button
-                onClick={() => handleSocialLogin("github")}
-                disabled={loading}
-                type="button"
-                className="flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition duration-200 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                <FaGithub className="h-5 w-5 text-gray-900" />
-                <span className="font-medium text-gray-700">GitHub</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <button
-                onClick={() => navigate('/login')}
-                className="font-semibold text-emerald-600 hover:text-emerald-500 hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
-          </div>
-
-          <div className="mt-12 text-center text-sm text-gray-500">
-            <p>
-              By creating an account, you agree to our{" "}
-              <a href="#" className="text-emerald-600 hover:underline">
-                Terms
-              </a>{" "}
-              and{" "}
-              <a href="#" className="text-emerald-600 hover:underline">
-                Privacy Policy
-              </a>
-            </p>
           </div>
         </div>
       </div>

@@ -7,6 +7,8 @@ export const verifyAuthUser = async (req, _, next) => {
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
 
+
+
   if (!token) {
     throw new ApiError(401, "Unauthorized request");
   }

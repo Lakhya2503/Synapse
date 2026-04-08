@@ -1,4 +1,3 @@
-
 export const requestHandler = async (
     api,
     setLoading,

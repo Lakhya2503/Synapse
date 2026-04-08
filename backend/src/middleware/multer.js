@@ -5,11 +5,13 @@ const storage = multer.diskStorage({
     cb(null, "./public");
   },
   filename: function (req, file, cb) {
-      cb(null, file.originalname);
-      //  (file.originalname);
+        const uniqueSuffix = Date.now() + "-" + Math.random(Math.round() * 1E9)
+        cb(null, file.fieldname + "-" + uniqueSuffix)
   },
 });
 
 const upload = multer({ storage: storage })
 
 export default upload
+
+

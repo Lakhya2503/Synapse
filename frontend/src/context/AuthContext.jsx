@@ -1,317 +1,211 @@
 import { Loader } from 'lucide-react';
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import  {useNavigate}  from 'react-router-dom';
+
+import {
+  getCurrentUser,
+  refreshToken,
   userLogin,
   userLogout,
   userRegister,
-  verificationOTPGenerate,
-  verifyEmailWithOTP,
-  getCurrentUser,
-  refreshToken
 } from '../api';
-import { LocalStorage, requestHandler } from '../utils';
+import { LocalStorage } from '../utils';
 
 const AuthContext = createContext(null);
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+};
 
 export const AuthProvider = ({ children }) => {
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);
-  const [otp, setOtp] = useState(null);
-  const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
 
-  /* ---------- Refresh Token Function ---------- */
-  const refreshAuthToken = useCallback(async () => {
-    try {
-      const response = await refreshToken();
-      const { accessToken } = response.data;
+  // -------------------- STATE --------------------
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(() => LocalStorage.get('user'));
+  const [otp, setOtp] = useState(null);
 
-      if (accessToken) {
-        setToken(accessToken);
-        LocalStorage.set('token', accessToken);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      return false;
-    }
+  // -------------------- HELPERS --------------------
+  const persistUser = useCallback((userData) => {
+    if (userData) LocalStorage.set('user', userData);
   }, []);
 
+  const clearAuth = useCallback(() => {
+    setUser(null);
+    setOtp(null);
+    LocalStorage.remove('user');
+  }, []);
 
-
-
-  /* ---------- Initialize Auth ---------- */
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const storedToken = LocalStorage.get('token');
-      const storedUser = LocalStorage.get('user');
-
-      // If we have both token and user in localStorage, restore them immediately
-      if (storedToken && storedUser) {
-        // Set state from localStorage for instant UI
-        setToken(storedToken);
-        setUser(storedUser);
-        console.log(storedUser);
-
-
-        // Verify token is still valid by making an API call
-        try {
-          const response = await getCurrentUser();
-          if (response.data) {
-            // Update with fresh user data
-            const freshUser = response.data.data;
-            setUser(freshUser);
-            LocalStorage.set('user', freshUser);
-          }
-        } catch (error) {
-          console.warn('Token validation failed:', error);
-
-          // If token is invalid (401), try to refresh it
-          if (error.response?.status === 401) {
-            const refreshSuccess = await refreshAuthToken();
-            if (!refreshSuccess) {
-              // Token refresh failed, clear auth and redirect to login
-              LocalStorage.remove('user');
-              LocalStorage.remove('token');
-              setUser(null);
-              setToken(null);
-              navigate('/login');
-            } else {
-              // Token refreshed successfully, fetch user again
-              try {
-                const newResponse = await getCurrentUser();
-                if (newResponse.data) {
-                  setUser(newResponse.data);
-                  LocalStorage.set('user', newResponse.data);
-                }
-              } catch (retryError) {
-                console.error('Failed to fetch user after token refresh:', retryError);
-              }
-            }
-          }
-          // For other errors (network issues, server down), keep using stored user
-        }
+  // -------------------- FETCH USER --------------------
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await getCurrentUser(); // must send cookies automatically
+      const userData = res?.data?.data;
+      if (userData) {
+        setUser(userData);
+        persistUser(userData);
       }
-      // If we have token but no user data, fetch user
-      else if (storedToken) {
-        setToken(storedToken);
-        try {
-          const response = await getCurrentUser();
-          if (response.data) {
-            const user = response.data;
-            setUser(user);
-            LocalStorage.set('user', user);
-          }
-        } catch (error) {
-          console.error('Failed to fetch user with token:', error);
-          if (error.response?.status === 401) {
-            // Token is invalid, clear it
-            LocalStorage.remove('token');
-            setToken(null);
-            navigate('/login');
-          }
-        }
-      }
-      // No auth data found, redirect to login
-      else {
-        navigate('/login');
-      }
+      return userData || null;
+    } catch (err) {
+      return null;
+    }
+  }, [persistUser]);
 
-      setIsInitializing(false);
-    };
+  // -------------------- TOKEN REFRESH --------------------
+  const refreshAuthToken = useCallback(async () => {
+    try {
+      await refreshToken(); // backend refreshes cookie
+      const userData = await fetchCurrentUser();
+      if (!userData) throw new Error('Failed to fetch user after refresh');
+      return true;
+    } catch (err) {
+      console.error('Refresh token failed:', err);
+      clearAuth();
+      navigate('/login');
+      return false;
+    }
+  }, [fetchCurrentUser, clearAuth, navigate]);
 
-    initializeAuth();
-  }, [navigate, refreshAuthToken]);
+  // -------------------- LOGOUT --------------------
+  const logout = useCallback(async () => {
+    setLoading(true);
+    try {
+      await userLogout(); // backend clears cookies
+    } catch (err) {
+      console.error('Logout failed:', err);
+    } finally {
+      clearAuth();
+      navigate('/login');
+      setLoading(false);
+    }
+  }, [clearAuth, navigate]);
 
-  /* ---------- Login ---------- */
+  // -------------------- LOGIN --------------------
   const login = async (payload) => {
     setLoading(true);
-    await requestHandler(
-      async () => {
-        const response = await userLogin(payload);
-        return response;
-      },
-      null,
-      (res) => {
-        const { user, accessToken } = res.data;
-        console.log(user);
-
-
-        setUser(user);
-        setToken(accessToken);
-
-        LocalStorage.set('user', user);
-        LocalStorage.set('token', accessToken);
-
-        // Redirect based on email verification status
-        if (user.isEmailVerified) {
-          navigate('/synapse');
-        } else {
-          navigate('/verify-account');
-        }
-      },
-      (error) => {
-        const errorMessage = error.response?.data?.message || error.message || 'Login failed';
-        alert(errorMessage);
-      }
-    ).finally(() => setLoading(false));
+    try {
+      await userLogin(payload); // backend sets cookies
+      const userData = await fetchCurrentUser();
+      if (!userData) throw new Error('Failed to fetch user');
+      navigate('/synapse');
+      return { success: true, user: userData };
+    } catch (err) {
+      throw new Error(err.response?.data?.message || err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  console.log(user);
-
-  /* ---------- Register ---------- */
-  const register = async (payload) => {
+  // -------------------- REGISTER --------------------
+  const register = async (formData) => {
     setLoading(true);
-    await requestHandler(
-      async () => {
-        // Handle file upload if avatar exists
-        if (payload.avatar) {
-          const formData = new FormData();
-          Object.keys(payload).forEach(key => {
-            if (key === 'avatar') {
-              formData.append(key, payload[key]);
-            } else {
-              formData.append(key, payload[key]);
-            }
-          });
-          return userRegister(formData);
-        }
-        return userRegister(payload);
-      },
-      null,
-      (res) => {
-        alert('Account created successfully. Please check your email for verification.');
-        navigate('/login');
-      },
-      (error) => {
-        const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
-        alert(errorMessage);
-      }
-    ).finally(() => setLoading(false));
+    try {
+      await userRegister(formData);
+      // navigate('/login');
+      return { success: true };
+    } catch (err) {
+      throw new Error(err.response?.data?.message || err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  /* ---------- Logout ---------- */
-  const logout = async () => {
-    setLoading(true);
-    await requestHandler(
-      async () => {
-        return userLogout();
-      },
-      null,
-      () => {
-        // Clear local state
-        setUser(null);
-        setToken(null);
-        setOtp(null);
 
-        // Clear localStorage
-        LocalStorage.remove('user');
-        LocalStorage.remove('token');
+  // -------------------- OAUTH -------------------- //
+const openOAuthPopup = (url, name) => {
+  const popup = window.open(
+    url,
+    name,
+    'width=1000,height=700,scrollbars=yes,resizable=yes'
+  );
+  if (!popup) throw new Error('Popup blocked');
+  return popup;
+};
 
-        // Redirect to login
-        navigate('/login');
-      },
-      (error) => {
-        console.error('Logout error:', error);
-        // Still clear local data even if server logout fails
-        setUser(null);
-        setToken(null);
-        LocalStorage.remove('user');
-        LocalStorage.remove('token');
-        navigate('/login');
-      }
-    ).finally(() => setLoading(false));
-  };
+const handleOAuthPopup = (url) => {
+  const popup = openOAuthPopup(url, 'oauth');
 
-  /* ---------- Generate OTP ---------- */
-  const generateOtp = async () => {
-    setLoading(true);
-    await requestHandler(
-      async () => {
-        return verificationOTPGenerate();
-      },
-      null,
-      (res) => {
-        alert('OTP has been sent to your email');
-      },
-      (error) => {
-        const errorMessage = error.response?.data?.message || error.message || 'Failed to generate OTP';
-        alert(errorMessage);
-      }
-    ).finally(() => setLoading(false));
-  };
+  const checkUser = setInterval(async () => {
+    try {
+      const userData = await fetchCurrentUser(); // 👈 FIX
 
-  /* ---------- Verify OTP ---------- */
-  const verifyEmailAndOtp = async (otpCode) => {
-    setLoading(true);
-    await requestHandler(
-      async () => {
-        return verifyEmailWithOTP(otpCode);
-      },
-      null,
-      (res) => {
-        setOtp(res.data);
+      if (userData) {
+        setUser(userData);
+        LocalStorage.set('user', userData);
 
-        // Update user verification status
-        if (user) {
-          const updatedUser = { ...user, isEmailVerified: true };
-          setUser(updatedUser);
-          LocalStorage.set('user', updatedUser);
-        }
-
-        alert('Email verified successfully!');
+        clearInterval(checkUser);
+        popup?.close();
         navigate('/synapse');
-      },
-      (error) => {
-        const errorMessage = error.response?.data?.message || error.message || 'OTP verification failed';
-        alert(errorMessage);
       }
-    ).finally(() => setLoading(false));
-  };
 
-  /* ---------- Update User Profile ---------- */
-  const updateProfile = async (updates) => {
-    // This would call your update APIs (username, fullName, avatar)
-    // After successful update, update both state and localStorage
-    console.log('Profile updates:', updates);
-  };
+      // stop polling if user manually closes popup
+      if (popup?.closed) {
+        clearInterval(checkUser);
+      }
+    } catch (err) {
+      // still waiting for OAuth to finish
+    }
+  }, 1000);
+};
 
-  /* ---------- Check Auth Status ---------- */
-  const isAuthenticated = useMemo(() => {
-    return !!token && !!user;
-  }, [token, user]);
+const loginWithGoogle = () =>
+  handleOAuthPopup(`${import.meta.env.VITE_SERVER_URI}/google`);
 
-  /* ---------- Memoized Context Value ---------- */
+const loginWithGithub = () =>
+  handleOAuthPopup(`${import.meta.env.VITE_SERVER_URI}/github`);
+
+  // -------------------- INIT --------------------
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await fetchCurrentUser(); 
+      } catch (err) {
+        await refreshAuthToken();
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    init();
+  }, [fetchCurrentUser, refreshAuthToken]);
+
+  // -------------------- DERIVED --------------------
+  const isAuthenticated = !!user;
+  const isVerified = !!user?.isEmailVerified;
+
   const value = useMemo(
     () => ({
       user,
-      token,
-      otp,
       loading,
       isAuthenticated,
+      isVerified,
       login,
       register,
       logout,
-      generateOtp,
-      verifyEmailAndOtp,
+      loginWithGoogle,
+      loginWithGithub,
       refreshAuthToken,
-      updateProfile
+      fetchCurrentUser,
     }),
-    [user, token, otp, loading, isAuthenticated, refreshAuthToken]
+    [user, loading, isAuthenticated, isVerified]
   );
 
-  /* ---------- Loading State ---------- */
+  // -------------------- UI --------------------
+
   if (isInitializing) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
-        <Loader className="w-12 h-12 animate-spin text-blue-600 mb-4" />
-        <p className="text-gray-600">Loading authentication...</p>
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader className="w-10 h-10 animate-spin text-blue-600" />
       </div>
     );
   }

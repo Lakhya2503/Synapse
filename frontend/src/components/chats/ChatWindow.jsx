@@ -4,7 +4,9 @@ import {
   SendIcon,
   Paperclip,
   Smile,
-  Copy
+  Copy,
+  Lock,
+  Unlock
 } from "lucide-react";
 import React, {
   useCallback,
@@ -38,7 +40,7 @@ import { emojis } from "../ui/emojis";
 import MessageBubble from '../common/MessageBubble'
 
 // Main Chat Window Component
-const ChatWindow = ({ otherUser, onMessageSent }) => {
+const ChatWindow = ({ otherUser, onMessageSent, chats, filterChat, chat }) => {
   const { socket, isConnected } = useSocket();
   const { user } = useAuth();
 
@@ -47,6 +49,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Constants
   const EMOJIS_PER_PAGE = 30;
@@ -70,6 +73,25 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fullChat = useMemo(() => {
+    if (!chatId || !Array.isArray(chats)) return null;
+    return chats.find(chat => chat._id === chatId);
+  }, [chats, chatId]);
+
+  console.log(chats);
+
+  const isBlocked = useMemo(() => {
+    if (!fullChat?.isBlock) return false;
+
+    // Check who blocked whom
+    if (fullChat.blockedBy?._id === user._id) {
+      return { status: true, type: 'you-blocked' };
+    } else {
+      return { status: true, type: 'you-are-blocked' };
+    }
+  }, [fullChat, user._id]);
 
   // Initialize chat
   useEffect(() => {
@@ -137,7 +159,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
     };
 
     const handleTyping = ({ chatId: id, userId, isTyping: typing }) => {
-      if (id !== chatId) return;
+      if (id !== chatId || isBlocked?.status) return;
 
       setTypingUsers(prev => {
         const newSet = new Set(prev);
@@ -149,6 +171,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
         return newSet;
       });
     };
+
 
     const handleMessageRead = ({ chatId: id, messageIds }) => {
       if (id !== chatId) return;
@@ -188,7 +211,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
       listeners.forEach(([event, handler]) => socket.off(event, handler));
       setTypingUsers(new Set());
     };
-  }, [socket, chatId, user._id, onMessageSent]);
+  }, [socket, chatId, user._id, onMessageSent, isBlocked]);
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
@@ -204,7 +227,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
 
   // Mark messages as read
   useEffect(() => {
-    if (!socket || !chatId || !messages.length) return;
+    if (!socket || !chatId || !messages.length || isBlocked?.status) return;
 
     const unreadMessages = messages.filter(
       msg => msg.sender._id !== user._id && !msg.read
@@ -216,12 +239,12 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
         messageIds: unreadMessages.map(msg => msg._id),
       });
     }
-  }, [messages, socket, chatId, user._id]);
+  }, [messages, socket, chatId, user._id, isBlocked]);
 
   // Handle typing indicator with debounce
   const handleTyping = useCallback(
     debounce(() => {
-      if (!socket || !chatId) return;
+      if (!socket || !chatId || isBlocked?.status) return;
 
       socket.emit(ChatEventEnum.TYPING_EVENT, {
         chatId,
@@ -239,10 +262,12 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
         });
       }, 1000);
     }, 300),
-    [socket, chatId]
+    [socket, chatId, isBlocked]
   );
 
   const handleSendMessage = async () => {
+    if (isBlocked?.status) return;
+
     const content = messageText.trim();
     if (!content || !chatId) return;
 
@@ -270,6 +295,8 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
     setReplyingTo(null);
     setEditingMessage(null);
 
+
+
     // Clear typing indicator
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -295,6 +322,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
           message: res.data,
         });
 
+
         onMessageSent?.(res.data);
       },
       () => {
@@ -305,7 +333,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
   };
 
   const handleEditMessage = async (messageId, newContent) => {
-    if (!newContent.trim()) return;
+    if (!newContent.trim() || isBlocked?.status) return;
 
     await requestHandler(
       async () => {
@@ -325,6 +353,8 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
   };
 
   const handleDeleteMessage = async (messageChatId, messageId) => {
+    if (isBlocked?.status) return;
+
     await requestHandler(
       async () => {
         const res = await deleteMessage(messageChatId, messageId);
@@ -341,7 +371,35 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
     );
   };
 
+  const handleFileUpload = async (e) => {
+    if (isBlocked?.status) return;
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Implement file upload logic here
+    setIsUploading(true);
+    try {
+      // Upload file to server
+      // const formData = new FormData();
+      // formData.append('file', file);
+      // formData.append('chatId', chatId);
+
+      // const response = await uploadFile(formData);
+      // handleSendMessage(response.data.fileUrl); // Send as message
+    } catch (error) {
+      console.error('File upload failed:', error);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleMessageAction = useCallback((action) => {
+    if (isBlocked?.status) return;
+
     switch (action.type) {
       case 'reply':
         setReplyingTo(action.message);
@@ -374,9 +432,11 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
       default:
         break;
     }
-  }, []);
+  }, [isBlocked]);
 
   const handleKeyDown = (e) => {
+    if (isBlocked?.status) return;
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (editingMessage) {
@@ -393,6 +453,8 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
   };
 
   const handleInputChange = (e) => {
+    if (isBlocked?.status) return;
+
     setMessageText(e.target.value);
     handleTyping();
   };
@@ -415,18 +477,18 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
 
   // Check if should show sender name in group chats
   const shouldShowSenderName = useCallback((currentMessage, previousMessage) => {
-    if (!otherUser.isGroupChat) return false;
+    if (!otherUser.isGroupChat || isBlocked?.status) return false;
     if (!previousMessage) return true;
 
     const currentSender = currentMessage.sender._id;
     const previousSender = previousMessage.sender._id;
 
     return currentSender !== previousSender;
-  }, [otherUser.isGroupChat]);
+  }, [otherUser.isGroupChat, isBlocked]);
 
   // Typing indicator text
   const typingIndicatorText = useMemo(() => {
-    if (typingUsers.size === 0) return null;
+    if (typingUsers.size === 0 || isBlocked?.status) return null;
 
     const typingUserNames = Array.from(typingUsers)
       .map(id => {
@@ -442,9 +504,11 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
 
     return typingUserNames.join(", ") +
       (typingUserNames.length === 1 ? " is typing..." : " are typing...");
-  }, [typingUsers, otherUser]);
+  }, [typingUsers, otherUser, isBlocked]);
 
   const handleAddEmoji = (emoji) => {
+    if (isBlocked?.status) return;
+
     setMessageText(prev => prev + emoji);
     setShowEmojiPicker(false);
   };
@@ -497,10 +561,21 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
           selectedMessages={selectedMessages}
           setSelectedMessages={setSelectedMessages}
           setIsProfileOpen={setIsProfileOpen}
+          isBlocked={isBlocked}
+          fullChat={fullChat}
+          user={user}
         />
 
+        {/* Blocking Banner */}
+        {isBlocked?.status && (
+          <BlockingBanner
+            isBlocked={isBlocked}
+            otherUser={otherUser}
+          />
+        )}
+
         {/* Reply Preview */}
-        {replyingTo && (
+        {!isBlocked?.status && replyingTo && (
           <ReplyPreview
             replyingTo={replyingTo}
             setReplyingTo={setReplyingTo}
@@ -508,7 +583,7 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
         )}
 
         {/* Edit Preview */}
-        {editingMessage && (
+        {!isBlocked?.status && editingMessage && (
           <EditPreview
             editingMessage={editingMessage}
             setEditingMessage={setEditingMessage}
@@ -528,28 +603,39 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
           handleMessageAction={handleMessageAction}
           clearSearch={clearSearch}
           messagesEndRef={messagesEndRef}
+          isBlocked={isBlocked}
         />
 
-        {/* Message Input */}
-        <MessageInput
-          typingIndicatorText={typingIndicatorText}
-          showEmojiPicker={showEmojiPicker}
-          messageText={messageText}
-          editingMessage={editingMessage}
-          replyingTo={replyingTo}
-          otherUser={otherUser}
-          chatId={chatId}
-          inputRef={inputRef}
-          handleInputChange={handleInputChange}
-          handleKeyDown={handleKeyDown}
-          handleSendMessage={handleSendMessage}
-          handleEditMessage={handleEditMessage}
-          setShowEmojiPicker={setShowEmojiPicker}
-          handleClearMessage={handleClearMessage}
-        />
+        {/* Message Input - Hidden if blocked */}
+        {!isBlocked?.status ? (
+          <MessageInput
+            typingIndicatorText={typingIndicatorText}
+            showEmojiPicker={showEmojiPicker}
+            messageText={messageText}
+            editingMessage={editingMessage}
+            replyingTo={replyingTo}
+            otherUser={otherUser}
+            chatId={chatId}
+            inputRef={inputRef}
+            handleInputChange={handleInputChange}
+            handleKeyDown={handleKeyDown}
+            handleSendMessage={handleSendMessage}
+            handleEditMessage={handleEditMessage}
+            setShowEmojiPicker={setShowEmojiPicker}
+            handleClearMessage={handleClearMessage}
+            fileInputRef={fileInputRef}
+            handleFileUpload={handleFileUpload}
+            isUploading={isUploading}
+          />
+        ) : (
+          <BlockedMessageInput
+            isBlocked={isBlocked}
+            otherUser={otherUser}
+          />
+        )}
 
         {/* Emoji Picker */}
-        {showEmojiPicker && (
+        {!isBlocked?.status && showEmojiPicker && (
           <EmojiPicker
             visibleEmojis={visibleEmojis}
             emojiPage={emojiPage}
@@ -560,18 +646,22 @@ const ChatWindow = ({ otherUser, onMessageSent }) => {
         )}
       </div>
 
+
+
+
       {/* Profile Section */}
       <ProfileSection
         otherUser={otherUser}
         onClose={() => setIsProfileOpen(false)}
         isOpen={isProfileOpen}
         chatId={chatId}
+        oneOnOneChat={fullChat ||  filterChat}
       />
     </div>
   );
 };
 
-// Sub-components for better organization
+// Sub-components
 
 const ChatHeader = ({
   otherUser,
@@ -583,30 +673,44 @@ const ChatHeader = ({
   setShowSearch,
   selectedMessages,
   setSelectedMessages,
-  setIsProfileOpen
+  setIsProfileOpen,
+  isBlocked,
+  fullChat,
+  user
 }) => (
   <div className="relative z-10 p-6 bg-gradient-to-r from-white via-white to-indigo-50/30 border-b border-gray-200/50 backdrop-blur-sm flex items-center justify-between shadow-lg shadow-indigo-100/30">
     <div className="flex items-center gap-4">
       <button
         onClick={() => setIsProfileOpen(true)}
         className="relative hover:scale-105 transition-transform group"
+        disabled={isBlocked?.status}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
         <img
           src={otherUser.avatar || FakeGroupAvatar}
           alt={otherUser.username || otherUser.name}
-          className="relative w-14 h-14 rounded-full object-cover border-4 border-white shadow-xl"
+          className={`relative w-14 h-14 rounded-full object-cover border-4 border-white shadow-xl ${isBlocked?.status ? 'opacity-60' : ''}`}
         />
-        {isConnected && (
+        {isConnected && !isBlocked?.status && (
           <div className="absolute bottom-1 right-1 w-4 h-4  rounded-full"></div>
         )}
       </button>
       <div>
-        <h2 className="font-bold text-xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-          {otherUser.username || otherUser.name}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-bold text-xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            {otherUser.username || otherUser.name}
+          </h2>
+          {isBlocked?.status && (
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${isBlocked.type === 'you-blocked'
+                ? 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
+                : 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200'
+              }`}>
+              {isBlocked.type === 'you-blocked' ? 'Blocked' : 'Blocked You'}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 mt-1">
-          {typingIndicatorText && (
+          {!isBlocked?.status && typingIndicatorText && (
             <div className="flex items-center gap-2">
               <div className="flex gap-1">
                 <span className="h-2 w-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full animate-bounce"></span>
@@ -618,42 +722,54 @@ const ChatHeader = ({
               </p>
             </div>
           )}
+          {isBlocked?.status && (
+            <p className="text-sm text-gray-500">
+              {isBlocked.type === 'you-blocked'
+                ? 'You have blocked this user'
+                : 'You cannot send messages'
+              }
+            </p>
+          )}
         </div>
       </div>
     </div>
 
     <div className="flex items-center gap-3">
-      {showSearch ? (
-        <div className="flex items-center bg-gradient-to-r from-white to-gray-50 rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="pl-4 pr-2">
-            <SearchIcon className="text-gray-400" size={18} />
-          </div>
-          <input
-            type="text"
-            placeholder="Search messages..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-2 py-2.5 bg-transparent focus:outline-none text-gray-700 w-48"
-            autoFocus
-          />
-          <button
-            onClick={() => {
-              setShowSearch(false);
-              setSearchTerm("");
-            }}
-            className="px-3 py-2.5 hover:bg-gray-100 transition-colors"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowSearch(true)}
-          className="p-3 rounded-xl bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 shadow hover:shadow-lg transition-all"
-          title="Search"
-        >
-          <SearchIcon className="text-gray-600" size={20} />
-        </button>
+      {!isBlocked?.status && (
+        <>
+          {showSearch ? (
+            <div className="flex items-center bg-gradient-to-r from-white to-gray-50 rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="pl-4 pr-2">
+                <SearchIcon className="text-gray-400" size={18} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search messages..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-2 py-2.5 bg-transparent focus:outline-none text-gray-700 w-48"
+                autoFocus
+              />
+              <button
+                onClick={() => {
+                  setShowSearch(false);
+                  setSearchTerm("");
+                }}
+                className="px-3 py-2.5 hover:bg-gray-100 transition-colors"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowSearch(true)}
+              className="p-3 rounded-xl bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 shadow hover:shadow-lg transition-all"
+              title="Search"
+            >
+              <SearchIcon className="text-gray-600" size={20} />
+            </button>
+          )}
+        </>
       )}
 
       <button
@@ -677,6 +793,28 @@ const ChatHeader = ({
           </button>
         </div>
       )}
+    </div>
+  </div>
+);
+
+const BlockingBanner = ({ isBlocked, otherUser }) => (
+  <div className="relative z-10 px-6 py-4 bg-gradient-to-r from-red-50/80 to-rose-50/80 border-y border-red-200/50 backdrop-blur-sm">
+    <div className="flex items-center justify-center gap-3">
+      <div className="flex-shrink-0">
+        {isBlocked.type === 'you-blocked' ? (
+          <Lock className="text-amber-600" size={20} />
+        ) : (
+          <Lock className="text-red-600" size={20} />
+        )}
+      </div>
+      <div className="text-center">
+        <p className={`font-bold ${isBlocked.type === 'you-blocked' ? 'text-amber-700' : 'text-red-700'}`}>
+          {isBlocked.type === 'you-blocked'
+            ? `You have blocked ${otherUser.username || otherUser.name}. Unblock them to send messages.`
+            : `${otherUser.username || otherUser.name} has blocked you. You cannot send messages.`
+          }
+        </p>
+      </div>
     </div>
   </div>
 );
@@ -724,7 +862,8 @@ const MessagesContainer = ({
   selectedMessages,
   handleMessageAction,
   clearSearch,
-  messagesEndRef
+  messagesEndRef,
+  isBlocked
 }) => (
   <div
     ref={messagesContainerRef}
@@ -739,6 +878,7 @@ const MessagesContainer = ({
         searchTerm={searchTerm}
         otherUser={otherUser}
         clearSearch={clearSearch}
+        isBlocked={isBlocked}
       />
     ) : (
       <div className="relative z-10">
@@ -752,6 +892,7 @@ const MessagesContainer = ({
             shouldShowSenderName={shouldShowSenderName}
             selectedMessages={selectedMessages}
             handleMessageAction={handleMessageAction}
+            isBlocked={isBlocked}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -760,32 +901,60 @@ const MessagesContainer = ({
   </div>
 );
 
-const EmptyMessagesState = ({ searchTerm, otherUser, clearSearch }) => (
+const EmptyMessagesState = ({ searchTerm, otherUser, clearSearch, isBlocked }) => (
   <div className="h-full flex flex-col items-center justify-center text-center p-8 relative z-10">
     <div className="relative mb-8">
-      <div className="w-32 h-32 rounded-full bg-gradient-to-r from-indigo-200/30 to-purple-200/30 flex items-center justify-center shadow-2xl">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-r from-indigo-300/40 to-purple-300/40 flex items-center justify-center">
-          <svg className="w-16 h-16 text-gradient" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
+      <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl ${
+        isBlocked?.status
+          ? 'bg-gradient-to-r from-red-200/30 to-rose-200/30'
+          : 'bg-gradient-to-r from-indigo-200/30 to-purple-200/30'
+      }`}>
+        <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
+          isBlocked?.status
+            ? 'bg-gradient-to-r from-red-300/40 to-rose-300/40'
+            : 'bg-gradient-to-r from-indigo-300/40 to-purple-300/40'
+        }`}>
+          {isBlocked?.status ? (
+            <Lock className="w-16 h-16 text-gradient" />
+          ) : (
+            <svg className="w-16 h-16 text-gradient" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          )}
         </div>
       </div>
     </div>
     <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
-      {searchTerm ? "No messages found" : "Start a conversation"}
+      {searchTerm
+        ? "No messages found"
+        : isBlocked?.status
+          ? "Conversation blocked"
+          : "Start a conversation"
+      }
     </h3>
     <p className="text-gray-600 mb-6 max-w-md">
       {searchTerm
         ? "Try searching with different keywords"
-        : `Send your first message to ${otherUser?.username || otherUser?.name}`
+        : isBlocked?.status
+          ? isBlocked.type === 'you-blocked'
+            ? `You have blocked ${otherUser?.username || otherUser?.name}. Unblock to send messages.`
+            : `${otherUser?.username || otherUser?.name} has blocked you.`
+          : `Send your first message to ${otherUser?.username || otherUser?.name}`
       }
     </p>
-    {searchTerm && (
+    {searchTerm ? (
       <button
         onClick={clearSearch}
         className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-200 transition-all"
       >
         Clear Search
+      </button>
+    ) : isBlocked?.type === 'you-blocked' && (
+      <button
+        onClick={() => {/* Add unblock functionality */}}
+        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-amber-200 transition-all"
+      >
+        Unblock User
       </button>
     )}
   </div>
@@ -798,7 +967,8 @@ const DateMessagesGroup = ({
   user,
   shouldShowSenderName,
   selectedMessages,
-  handleMessageAction
+  handleMessageAction,
+  isBlocked
 }) => (
   <div className="mb-8">
     {/* Date Separator */}
@@ -825,6 +995,7 @@ const DateMessagesGroup = ({
         onMessageAction={handleMessageAction}
         isSelected={selectedMessages.has(message._id)}
         onSelect={(messageId) => handleMessageAction({ type: 'select', messageId })}
+        isBlocked={isBlocked?.status}
       />
     ))}
   </div>
@@ -844,7 +1015,10 @@ const MessageInput = ({
   handleSendMessage,
   handleEditMessage,
   setShowEmojiPicker,
-  handleClearMessage
+  handleClearMessage,
+  fileInputRef,
+  handleFileUpload,
+  isUploading
 }) => (
   <div className="relative z-10 p-6 bg-gradient-to-b from-white via-white to-indigo-50/30 border-t border-gray-200/50 backdrop-blur-sm">
     {typingIndicatorText && (
@@ -861,8 +1035,25 @@ const MessageInput = ({
     )}
 
     <div className="flex items-center gap-3">
-      <button className="p-3.5 rounded-xl bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 shadow hover:shadow-lg transition-all group">
-        <Paperclip className="text-gray-600 group-hover:scale-110 transition-transform" size={22} />
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="image/*,video/*,.pdf,.doc,.docx"
+        className="hidden"
+      />
+
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isUploading}
+        className="p-3.5 rounded-xl bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 shadow hover:shadow-lg transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isUploading ? (
+          <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+        ) : (
+          <Paperclip className="text-gray-600 group-hover:scale-110 transition-transform" size={22} />
+        )}
       </button>
 
       <button
@@ -918,6 +1109,28 @@ const MessageInput = ({
         </span>
       </div>
     )}
+  </div>
+);
+
+const BlockedMessageInput = ({ isBlocked, otherUser }) => (
+  <div className="relative z-10 p-6 bg-gradient-to-b from-gray-50 via-gray-50/80 to-gray-100/30 border-t border-gray-300/50 backdrop-blur-sm">
+    <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border-2 border-red-200/50">
+      <Lock className={`${isBlocked.type === 'you-blocked' ? 'text-amber-600' : 'text-red-600'}`} size={22} />
+      <p className={`text-sm font-medium ${isBlocked.type === 'you-blocked' ? 'text-amber-700' : 'text-red-700'}`}>
+        {isBlocked.type === 'you-blocked'
+          ? `You have blocked ${otherUser.username || otherUser.name}. Unblock to send messages.`
+          : `${otherUser.username || otherUser.name} has blocked you. You cannot send messages.`
+        }
+      </p>
+      {isBlocked.type === 'you-blocked' && (
+        <button
+          onClick={() => {/* Add unblock functionality */}}
+          className="ml-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-xl hover:shadow-lg transition-all"
+        >
+          Unblock
+        </button>
+      )}
+    </div>
   </div>
 );
 

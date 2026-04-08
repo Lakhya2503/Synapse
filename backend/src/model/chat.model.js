@@ -18,7 +18,11 @@ const chatSchema = new Schema(
     avatar : {
       type : String,
       default : "https://i.pinimg.com/736x/54/47/b1/5447b18f3ff226459b66481a3a684808.jpg"
-    } , 
+    },
+    isArchived: {
+      type : Boolean,
+      default : false 
+    },
     lastMessage: {
       type: Schema.Types.ObjectId,
       ref: "ChatMessage",

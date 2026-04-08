@@ -1,19 +1,24 @@
 import { Router } from "express";
-import { sendMessage } from "../controller/message.controller.js";
-import  { verifyAuthUser } from "../middleware/auth.js";
-import { addNewParticipantInGroupChat, createGroupChat, createOrGetAOneOnOneChat, 
-  deleteGroupChat, 
-  deleteOneOnOneChat, 
-  getAllChats, 
-  getGroupChatDetails, 
-  leaveGroupChat, 
-  removeParticipantFromGroupChat, 
-  renameGroupChat, 
-  searchAvailableUsers } from '../controller/chat.controller.js'
-import { mongoIdPathVariableValidator } from '../validator/mongodb.validator.js'
-import { validate } from '../validator/validate.js'
-import {  } from '../validator/message.validator.js'
-import { updateGroupChatNameValidator } from '../validator/chat.validator.js'
+import {
+  addNewParticipantInGroupChat, createGroupChat, createOrGetAOneOnOneChat,
+  deleteOneOnOneChat,
+  getAllChats,
+  getGroupChatDetails,
+  leaveGroupChat,
+  removeParticipantFromGroupChat,
+  renameGroupChat,
+  searchAvailableUsers,
+  deleteGroupChat,
+  blockChat,
+  unBlockChat,
+  archivedChat,
+  unArivedChat
+} from '../controller/chat.controller.js';
+import { verifyAuthUser } from "../middleware/auth.js";
+import { updateGroupChatNameValidator } from '../validator/chat.validator.js';
+import { } from '../validator/message.validator.js';
+import { mongoIdPathVariableValidator } from '../validator/mongodb.validator.js';
+import { validate } from '../validator/validate.js';
 
 const router = Router();
 
@@ -28,10 +33,18 @@ router.route('/users').get(searchAvailableUsers)
 router
   .route('/c/:receiverId')
   .post(
-    mongoIdPathVariableValidator("receiverId"),  
+    mongoIdPathVariableValidator("receiverId"),
     validate,
     createOrGetAOneOnOneChat
 )
+
+router
+  .route('/delete-group/:chatId')
+  .delete(
+    mongoIdPathVariableValidator("chatId"),
+    validate,
+    deleteGroupChat
+  )
 
 router
   .route('/create-group')
@@ -46,7 +59,7 @@ router
     .get(mongoIdPathVariableValidator("chatId"), validate,getGroupChatDetails )
 
 
-router 
+router
     .route('/rename-group-chat/:chatId')
     .get(mongoIdPathVariableValidator("chatId"), validate, getGroupChatDetails)
     .patch(
@@ -56,7 +69,7 @@ router
       renameGroupChat
     )
 
- 
+
 router
   .route('/group/remove-participant/:chatId/:participantId')
   .get(getAllChats)
@@ -68,7 +81,7 @@ router
   )
 
 router
-  .route('/leave/group/:chatId')
+  .route('/group/leave/:chatId')
   .delete(mongoIdPathVariableValidator("chatId"),validate, leaveGroupChat)
 
 router
@@ -83,6 +96,25 @@ router
     validate,
     addNewParticipantInGroupChat
   )
+
+router
+.route("/block-chat/:chatId") 
+.patch(mongoIdPathVariableValidator("chatId"),validate,blockChat)
+
+router
+.route("/un-block-chat/:chatId") 
+.patch(mongoIdPathVariableValidator("chatId"),validate,unBlockChat)
+
+
+router
+.route("/archived-chat/:chatId") 
+.patch(mongoIdPathVariableValidator("chatId"),validate,archivedChat)
+
+router
+.route("/un-archived-chat/:chatId") 
+.patch(mongoIdPathVariableValidator("chatId"),validate,unArivedChat)
+
+
 
 
 export default router;

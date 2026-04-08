@@ -7,6 +7,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { removeLocalFile } from '../utils/helper.js';
 import Chat from './../model/chat.model.js';
 import ChatMessage from './../model/chatMessage.model.js';
+import User from "../model/user.model.js";
 // user has one to one chat like simple chat ( user1 to user2 )   `` using comman functionality
 
 // user was chating on one to many like group chat ( user1 to user2, user3, user4) `` using lookup functionality
@@ -43,8 +44,6 @@ const getAllMessage = asyncHandler(async (req, res) => {
 
   const chat = await Chat.findById(chatId);
 
-//    (`chat ${chat}`);
-
 
   if (!chat) {
     throw new ApiError(404, "Chat not found");
@@ -61,7 +60,6 @@ const getAllMessage = asyncHandler(async (req, res) => {
     { $sort: { createdAt: -1 } },
   ]);
 
-//    (`messages :${messages}`);
 
 
   return res
@@ -74,17 +72,19 @@ const sendMessage = asyncHandler(async (req, res) => {
   const { chatId } = req.params;
   const { content } = req.body;
 
-//    (`chatid ${chatId}`);
-//    (`chatid type ${typeof(chatId)}`);
-//    (`req.body : ${req.body}`);
-//    (`req.body type : ${typeof(req.body)}`);
-
-
   if (!content?.trim()) {
     throw new ApiError(400, "Message content required");
   }
 
   const chat = await Chat.findById(chatId);
+
+  let blockByUserID = chat.participants.filter(user => !user._id.equals(req.user._id))
+
+  let blockUser = await User.findById(blockByUserID)
+
+  if(chat.isBlock){
+    throw new ApiError(400, `blocked by ${blockUser.username}`)
+  }
 
   if (!chat) {
     throw new ApiError(404, "Chat not found");

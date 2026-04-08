@@ -1,28 +1,24 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../src/context/AuthContext'
-
 import PublicRoute from './components/auth/PublicRoute'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
-import OTPCompo from './components/auth/OTPCompo'
-
 import Synapse from './pages/Synapse'
-import VerifyAccountButton from './components/common/VerifyAccountButton'
 import Profile from './components/common/Profile'
-
 import Chat from './components/common/Chat'
 import Group from './components/common/Group'
 import Archive from './components/common/Archive'
 import Setting from './components/common/Setting'
-
 import NewChat from './components/forms/NewChat'
 import NewGroup from './components/forms/NewGroup'
 import NewCommunity from './components/forms/NewCommunity'
 import Explore from './components/forms/Explore'
 import AIAssistanctChat from './components/forms/AIAssistanctChat'
 import ChatWithOneOnOne from './components/forms/ChatWithOneOnOne'
+import OAuthHandler from './components/auth/OAuthHandler'
+import ForgetPasswordRequest from './components/auth/ForgetPasswordRequest'
+import ResetForgottenPassword from './components/auth/ResetForgottenPassword'
 
 function App() {
   const { token, user } = useAuth()
@@ -42,7 +38,7 @@ function App() {
         element={
           <PublicRoute>
             <Login />
-          </PublicRoute>
+           </PublicRoute>
         }
       />
 
@@ -51,12 +47,20 @@ function App() {
         element={
           <PublicRoute>
             <Register />
-          </PublicRoute>
+           </PublicRoute>
         }
       />
 
-      <Route path="/otp-verify" element={<OTPCompo />} />
-      <Route path="/verify-account" element={<VerifyAccountButton />} />
+
+      {/* <Route path="/oauth/callback" element={<OAuthHandler />} /> */}
+      <Route path="/google" element={<OAuthHandler />} />
+      <Route path="/github" element={<OAuthHandler />} />
+
+
+      {/* forget password request */}
+      <Route path="/forgot-password-request" element={<ForgetPasswordRequest />} />
+      <Route path="/forgot-password/:hashToken" element={<ResetForgottenPassword />} />
+
 
       {/* PROTECTED APP */}
       <Route

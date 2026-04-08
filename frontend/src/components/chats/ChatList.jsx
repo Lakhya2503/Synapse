@@ -6,6 +6,7 @@ import AddMenu from "./AddMenu";
 import DotMenu from "./DotMenu";
 import { getRelativeTime, getInitials } from "./utils";
 import { useAuth } from '../../context/AuthContext'
+import { AvatarImage } from "../../../public";
 
 const ChatList = ({
   chats = [],
@@ -151,11 +152,21 @@ const ChatList = ({
     const other = getOtherUser(chat);
     const name = other?.username || other?.email || "";
     const lastMsg = chat.latestMessage?.content || "";
+
+    if(!chat.isArchived) {
     return (
-      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lastMsg.toLowerCase().includes(searchQuery.toLowerCase())
+          name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          lastMsg.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    }
+
+
   });
+
+
+
+
 
   // User stats
   const totalMessages = chats.reduce((sum, chat) => sum + (chat.messageCount || 0), 0);
@@ -163,6 +174,8 @@ const ChatList = ({
     const other = getOtherUser(chat);
     return other?.online;
   }).length;
+
+
 
   return (
     <div className="w-[420px] border-r border-gray-200/50 bg-gradient-to-b from-white via-white to-indigo-50/20 flex flex-col shadow-2xl shadow-blue-100/20">
@@ -175,7 +188,7 @@ const ChatList = ({
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur-md opacity-30 animate-pulse"></div>
                 <img
-                  src={user.avatar || `https://ui-avatars.com/api/?name=${user.username}&background=667eea&color=fff&bold=true`}
+                  src={user.avatar || AvatarImage}
                   alt={user.username}
                   className="relative h-20 w-20 rounded-2xl object-cover border-4 border-white shadow-xl"
                 />

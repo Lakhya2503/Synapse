@@ -9,11 +9,6 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
 });
 
-//  (
-//     process.env.CLOUDINARY_API_KEY,
-//     process.env.CLOUDINARY_API_SECRET,
-//     process.env.CLOUDINARY_CLOUD_NAME
-// );
 
 
 const uploadFiles = async function (localFilePath) {
@@ -21,15 +16,10 @@ const uploadFiles = async function (localFilePath) {
         if (!localFilePath) {
             throw new ApiError(404, "localFile not found")
         }
-        //  (
-        //   process.env.CLOUDINARY_API_KEY,
-        //   process.env.CLOUDINARY_API_SECRET,
-        //   process.env.CLOUDINARY_CLOUD_NAME
-        // );
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: 'auto'
         })
-         (`localFilePath was ${response.url}`);
+        //  (`localFilePath was ${response.url}`);
         return response
     } catch (error) {
         fs.unlinkSync(localFilePath)

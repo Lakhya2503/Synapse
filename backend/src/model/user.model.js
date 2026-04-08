@@ -19,12 +19,13 @@ const userSchema = new Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: [true, "Password is required"],
     },
     email: {
       type: String,
       required: true,
       trim: true,
+      unique: true,
       lowercase: true,
     },
     role : {
@@ -95,6 +96,7 @@ userSchema.methods.generateRefreshToken = function () {
   });
 };
 
+
 userSchema.methods.generateTemporaryToken = function () {
   const unHashedToken = crypto.randomBytes(20).toString("hex");
   const hashedToken = crypto
@@ -105,7 +107,7 @@ userSchema.methods.generateTemporaryToken = function () {
   const tokenExpiry = Date.now() + USER_TEMPORARY_TOKEN_EXPIRY
 
   return { unHashedToken, hashedToken, tokenExpiry };
-}
+} 
 
 const User = model("User", userSchema);
 export default User;

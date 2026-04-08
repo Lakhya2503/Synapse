@@ -41,7 +41,7 @@ const userChangeCurrentPasswordValidator = () => {
     ]
 }
 
-const userForgetPasswordValidator = () => {
+const userForgetPasswordValidator = () => {    
     return [
         body("email")
             .notEmpty()

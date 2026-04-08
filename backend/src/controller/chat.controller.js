@@ -430,6 +430,8 @@ const leaveGroupChat = asyncHandler(async (req, res) => {
       isGroupChat: true,
     });
 
+
+
     if (!groupChat) {
         throw new ApiError(404, "GROUP CHAT NOT EXITS")
     }
@@ -621,8 +623,224 @@ const getAllChats = asyncHandler(async (req, res) => {
         ...chatCommanAggregation()
     ])
 
+
     return res.status(200).json(new ApiRespose(200, chat, "USER CHATS FETCH SUCCESSFULLY"))
 })
+
+const blockChat = asyncHandler(async(req,res)=>{
+    
+    const { chatId } = req.params
+
+
+    const user = await User.findById(req.user._id)
+
+
+    const oneOnOneChat = await Chat.findById(chatId)
+
+    if(!oneOnOneChat) {
+        throw new ApiError(404, "Chat Not Exist")
+    }
+
+    const updateOneOnOneChat = await Chat.findByIdAndUpdate(
+        chatId,
+        {
+            $set : {
+                isBlock : true
+            }
+        },
+        { new : true }
+    )
+
+    const chat = await Chat.aggregate([
+        {
+            $match : {
+              _id : updateOneOnOneChat._id
+            }
+        },
+        ...chatCommanAggregation()
+    ])
+
+
+    const payload = chat[0]
+
+    
+
+    payload.participants.forEach((participant)=>{
+        emitSocketEvent(
+            req,
+            participant._id?.toString(),
+            ChatEventEnum.BLOCKCHAT,
+            payload
+        )
+    })
+
+    return res
+    .status(200)
+    .json(new ApiRespose(200, chat[0],`USER BLOCK BY ${user.username}`))
+})
+
+
+const unBlockChat = asyncHandler(async(req,res)=>{
+    
+    const { chatId } = req.params
+
+
+    const user = await User.findById(req.user._id)
+
+
+    const oneOnOneChat = await Chat.findById(chatId)
+
+    if(!oneOnOneChat) {
+        throw new ApiError(404, "Chat Not Exist")
+    }
+
+    const updateOneOnOneChat = await Chat.findByIdAndUpdate(
+        chatId,
+        {
+            $set : {
+                isBlock : false
+            }
+        },
+        { new : true }
+    )
+
+    const chat = await Chat.aggregate([
+        {
+            $match : {
+              _id : updateOneOnOneChat._id
+            }
+        },
+        ...chatCommanAggregation()
+    ])
+
+
+    const payload = chat[0]
+
+
+    
+
+    payload.participants.forEach((participant)=>{
+        emitSocketEvent(
+            req,
+            participant._id?.toString(),
+            ChatEventEnum.BLOCKCHAT,
+            payload
+        )
+    })
+
+    return res
+    .status(200)
+    .json(new ApiRespose(200, chat[0],`USER UN-BLOCK BY ${user.username}`))
+})
+
+const archivedChat = asyncHandler(async(req,res)=>{
+    
+    const { chatId } = req.params
+
+
+    const user = await User.findById(req.user._id)
+
+
+    const oneOnOneChat = await Chat.findById(chatId)
+
+    if(!oneOnOneChat) {
+        throw new ApiError(404, "Chat Not Exist")
+    }
+
+    const updateOneOnOneChat = await Chat.findByIdAndUpdate(
+        chatId,
+        {
+            $set : {
+                isArchived : true
+            }
+        },
+        { new : true }
+    )
+
+    const chat = await Chat.aggregate([
+        {
+            $match : {
+              _id : updateOneOnOneChat._id
+            }
+        },
+        ...chatCommanAggregation()
+    ])
+
+
+    const payload = chat[0]
+
+    console.log(payload);
+    
+
+    payload.participants.forEach((participant)=>{
+        emitSocketEvent(
+            req,
+            participant._id?.toString(),
+            ChatEventEnum.ARCHEVIDCHAT,
+            payload
+        )
+    })
+
+    return res
+    .status(200)
+    .json(new ApiRespose(200, chat[0],`USER ARCHIVED BY ${user.username}`))
+})
+
+const unArivedChat = asyncHandler(async(req,res)=>{
+      
+    const { chatId } = req.params
+
+
+    const user = await User.findById(req.user._id)
+
+
+    const oneOnOneChat = await Chat.findById(chatId)
+
+    if(!oneOnOneChat) {
+        throw new ApiError(404, "Chat Not Exist")
+    }
+
+    const updateOneOnOneChat = await Chat.findByIdAndUpdate(
+        chatId,
+        {
+            $set : {
+                isArchived : false
+            }
+        },
+        { new : true }
+    )
+
+    const chat = await Chat.aggregate([
+        {
+            $match : {
+              _id : updateOneOnOneChat._id
+            }
+        },
+        ...chatCommanAggregation()
+    ])
+
+
+    const payload = chat[0]
+
+    console.log(payload);
+    
+
+    payload.participants.forEach((participant)=>{
+        emitSocketEvent(
+            req,
+            participant._id?.toString(),
+            ChatEventEnum.ARCHEVIDCHAT,
+            payload
+        )
+    })
+
+    return res
+    .status(200)
+    .json(new ApiRespose(200, chat[0],`USER UN-ARCHIVED BY ${user.username}`))
+})
+
+
+
 
 // const updateGroupAvatar = asyncHandler(async(req,res) =>{
 
@@ -641,5 +859,9 @@ export {
   leaveGroupChat,
   removeParticipantFromGroupChat,
   renameGroupChat,
-  searchAvailableUsers
+  searchAvailableUsers,
+  blockChat,
+  unBlockChat,
+  archivedChat,
+  unArivedChat
 };

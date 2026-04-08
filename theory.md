@@ -6,7 +6,7 @@
 npx  kill-port PORT
 ```
 
-ex : npx kill-port 3000
+ex :
 " 3000 is a port number it's common use port "
 
 ##

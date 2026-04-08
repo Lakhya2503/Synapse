@@ -1,136 +1,148 @@
 import passport from "passport";
-import { Strategy as GoogleStratergy } from 'passport-google-oauth20'
-import { Strategy as GithubStratergy } from 'passport-github2'
-import { userLoginType, userRoleEnum } from '../constant.js'
-import ApiError from '../utils/ApiError.js'
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as GithubStrategy } from "passport-github2";
 import User from "../model/user.model.js";
+import ApiError from "../utils/ApiError.js";
+import { userLoginType, userRoleEnum } from "../constant.js";
 
 
-try {
-    passport.serializeUser((user, next)=>{
-        next(null, user._id)
-    })  
+passport.serializeUser((user, done) => {
+  done(null, user._id);
+});
 
-    passport.deserializeUser(async(id, next)=>{
-            try {
-                    const user = await User.findById(id)
-                    if(user) next(null, user)
-                        else next(new ApiError(404, "user not exist"),null)
-            } catch (error) {
-                next(
-                    new ApiError(
-                        500,
-                        "Something went's wrong while deserializing the user. Error" , + error
-                    ),
-                    null
-                )
-            }
-    });
+passport.deserializeUser(async (id, done) => {
+  try {
+    if (!id) return done(null, false);
 
-    passport.use(
-        new GoogleStratergy(
-            {
-                clientID : process.env.GOOGLE_CLIENT_ID,
-                clientSecret : process.env.GOOGLE_CLIENT_SECRET,
-                callbackURL : process.env.GOOGLE_CALLBACK_URL
-            },
-            async(_,__,profile,next)=>{
-                    const user = await User.findOne({email : profile._json.email})
-                    if(user) {
-                        if(user.loginType !== userLoginType.GOOGLE) {
-                            next(
-                                new ApiError(
-                                    400,
-                                    "You have previously register using" 
-                                    + user.loginType?.toLocaleLowerCase()?.split("_").join(" ") 
-                                    + ".please use the" 
-                                    +  user.loginType?.toLowerCase()?.split("_").join(" ") 
-                                    + "login option to your account"
+    const user = await User.findById(id);
+    return done(null, user || false);
+  } catch (error) {
+    return done(error, null);
+  }
+});
 
-                                ),
-                                null
-                            )
-                        }else {
-                            next(null,user)
-                        }
-                    } else {
-                        const createdUser = await User.create({
-                            email : profile._json.email,
-                            password : profile._json.sub,
-                            username : profile._json.email?.split("@")[0],
-                            isEmailVerified : true,
-                            role : userRoleEnum.USER,
-                            avatar : profile._json.picture,
-                            loginType : userLoginType.GOOGLE
-                        })
-                        if(createdUser) {
-                            next(null, createdUser)
-                        } else {
-                            next(new ApiError(500, "Error while registering the user"),null)
-                        }
-                    }
-            }
-        )
-    )
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      scope: ["profile", "email"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value;
 
-    passport.use(
-        new GithubStratergy(
-            {
-                clientID : process.env.GITHUB_CLIENT_SECRET,
-                clientSecret : process.env.GITHUB_CLIENT_SECRET,
-                callbackURL : process.env.GITHUB_CALLBACK_URL
-            },
-            async(_,__,profile,next) => {
-                const user = await User.findOne({email : profile._json.email})
+        if (!email) {
+          return done(
+            new ApiError(400, "Google account does not have an email"),
+            null
+          );
+        }
 
-                if(user){
-                    if(user.loginType !== userLoginType.GITHUB){
-                        next(
-                            new ApiError(
-                                400,
-                                `You have previously registred using` +
-                                user.loginType?.toLowerCase().split("_").join(" ") +
-                                 ".please use the" + 
-                                 user.loginType?.toLowerCase().split("_").join(" ") +
-                                 " login option to access your account"
-                            ),null
-                        )
-                    } else {
-                        if(!profile._json.email){
-                            next(
-                                new ApiError(
-                                    400,
-                                    `User does not have a public email associated with their account. Please try another login method`
-                                ),
-                                null
-                            )
-                        }
-                    } 
-                }else {
-                        const userNameExist = await User.findOne({
-                            username : profile?.username,
-                        })   
+        let user = await User.findOne({ email });
 
-                       const createdUser = await User.create({
-                            email : profile._json.email,
-                            password : profile._json.node_Id,
-                            username : userNameExist ? profile._json.email?.split("@")[0] : profile._json.username ,
-                            isEmailVerified : true,
-                            role : userRoleEnum.USER,
-                            loginType : userLoginType.GITHUB,
-                            avatar : profile._json.picture,
-                       })
+        // User exists
+        if (user) {
+          if (user.loginType !== userLoginType.GOOGLE) {
+            return done(
+              new ApiError(
+                400,
+                `You previously registered using ${user.loginType
+                  .toLowerCase()
+                  .replace("_", " ")}. Please use that login method.`
+              ),
+              null
+            );
+          }
+          return done(null, user);
+        }
 
-                       if(createdUser) {
-                            next(null, createdUser)
-                       }else {
-                            next(new ApiError(500, "Error while creating new user"),null)
-                       }
-                    }
-            }
-        )
-    )
+        // Create new user
+        user = await User.create({
+          email,
+          username: email.split("@")[0].replace(/[^a-zA-Z]/g, ''),
+          password: profile.id, // or crypto.randomUUID()
+          isEmailVerified: true,
+          role: userRoleEnum.USER,
+          avatar: profile.photos?.[0]?.value,
+          loginType: userLoginType.GOOGLE,
+        });
 
-} catch (error) {
-    console.error(`PASSPORT ERROR `, error.message)
-}
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
+      }
+    }
+  )
+);
+
+
+
+passport.use(
+  new GithubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: process.env.GITHUB_CALLBACK_URL,
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value;
+
+        
+
+        if (!email) {
+          return done(
+            new ApiError(
+              400,
+              "GitHub account does not have a public email"
+            ),
+            null
+          );
+        }
+
+        let user = await User.findOne({ email });
+
+        if (user) {
+          if (user.loginType !== userLoginType.GITHUB) {
+            return done(
+              new ApiError(
+                400,
+                `You previously registered using ${user.loginType
+                  .toLowerCase()
+                  .replace("_", " ")}. Please use that login method.`
+              ),
+              null
+            );
+          }
+          return done(null, user);
+        }
+
+        const usernameExists = await User.findOne({
+          username: profile.username,
+        });
+
+
+
+        user = await User.create({
+          email,
+          username: usernameExists
+            ? email.split("@")[0]
+            : profile.username,
+          password: profile.id,
+          isEmailVerified: true,
+          role: userRoleEnum.USER,
+          avatar: profile.photos?.[0]?.value,
+          loginType: userLoginType.GITHUB,
+        });
+
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
+      }
+    }
+  )
+);
+
+export default passport;

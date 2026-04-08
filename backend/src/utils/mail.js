@@ -6,22 +6,25 @@ const sendMail = async (options) => {
         theme: 'default',
         product: {
             name: "Synapse",
-            link: "localhost:5002"
+            link: "http://localhost:5002"
         },
     })
 
+    
+
     const emailTextual = mailGenerator.generatePlaintext(options.mailContent)
     const emailHtml = mailGenerator.generate(options.mailContent)
+    
 
     const transporter = nodemailer.createTransport({
         host: process.env.MAILSTREP_SMTP_HOST,
-        port: process.env.MAILSTREP_SMTP_PORT,
+        port: Number(process.env.MAILSTREP_SMTP_PORT),
         auth: {
             user: process.env.MAILSTREP_SMTP_USER,
             pass: process.env.MAILSTREP_SMTP_PASS,
         },
     })
-
+    
     const mail = {
         from: process.env.MAIL_FROM || 'mail.synapse@gmail.com',
         to: options.email,
@@ -29,13 +32,13 @@ const sendMail = async (options) => {
         text: emailTextual,
         html: emailHtml
     }
-
+    
     try {
         await transporter.sendMail(mail)
-        //  ('Email sent successfully')
+         console.log('Email sent successfully')
         return true
     } catch (error) {
-        //  ('Error sending email:', error.message)
+         console.log('Error sending email:', error.message)
         return false
     }
 }
@@ -63,10 +66,11 @@ const emailVerificationMailgenContent = (username, verificationUrl, otp) => {
         body: {
             name: username,
             intro: `Welcome to SYNAPSE! 👋 We're excited to have you here.`,
-            dictionary: {
-                "Your Verification OTP": otp,
-                "OTP Valid For": "10 minutes"
-            },
+            dictionary: [
+                {key:"Your Verification OTP", value: otp},
+                {key: "OTP Valid For", value : "10 minutes"}
+            ],
+
             action: {
                 instructions: "Use the OTP above or click the button below to verify your email:",
                 button: {

@@ -105,6 +105,7 @@ const limiter = rateLimit({
     return req.path === '/health' || req.path === '/'
   }
 })
+
 app.use(limiter)
 
 // Body & cookies
@@ -187,15 +188,38 @@ app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
-    suggestion: 'Check available endpoints at /api/status'
+    suggestion: `Check available endpoints at ${req.originalUrl}`,
+    log: {
+      // REQUEST
+      method: req.method,
+      url: req.originalUrl,
+      path: req.path,
+      protocol: req.protocol,
+      httpVersion: req.httpVersion,
+      secure: req.secure,
+      ip: req.ip,
+      ips: req.ips,
+      hostname: req.hostname,
+
+      query: req.query,
+      params: req.params,
+      headers: req.headers,
+      body: req.body,
+
+      // RESPONSE (what will be sent)
+      status: res.statusCode,
+      statusMessage: res.statusMessage
+    }
   })
 })
+
+
 
 // ========== 7. ERROR HANDLER ==========
 // This MUST come after 404 handler
 app.use((err, req, res, next) => {
   console.log(`Route ${req.originalUrl} not found`);
-  
+
   console.error('Server Error:', err.message)
 
 

@@ -6,18 +6,17 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import uploadFiles from "../utils/cloudinary.js";
 import {
-    emailVerificationMailgenContent,
-    forgetPasswordMailgenContent,
-    sendMail
+  emailVerificationMailgenContent,
+  forgetPasswordMailgenContent,
+  sendMail
 } from "../utils/mail.js";
-import OTPGenerate from './../utils/OTPgenerate.js';
-
-
-let storeOTP = ''
+import ApiRespose from '../utils/ApiResponse.js';
+import crypto from 'crypto'
 
 
 const generateAccessRefreshToken = async (userId) => {
   const user = await User.findById(userId);
+
   if (!user) throw new ApiError(404, "User not found");
 
   const accessToken = await user.generateAccessToken();
@@ -33,19 +32,11 @@ const generateAccessRefreshToken = async (userId) => {
 
 const createAccount = asyncHandler(async (req, res) => {
 
-   (` req ${req}`);
-
   const {
     username,
     password,
     email,
   } = req.body;
-
-  //  (`req.body : ${req.body}`);
-
-
-  //  (`username : ${username} ; password : ${password} ; email : ${email}`);
-
 
 
 
@@ -73,6 +64,8 @@ const createAccount = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to upload avatar file");
   }
 
+
+
   // Create user
   const user = await User.create({
     username,
@@ -87,11 +80,19 @@ const createAccount = asyncHandler(async (req, res) => {
   user.emailVerificationToken = hashedToken
   user.emailVerificationExpiry = tokenExpiry
 
+  await user.save({ validateBeforeSave: false });
+
+
   //  (`email : ${user.email}`);
   //  (`username : ${user.username}`);
   //  (`user verification url : ${req.protocol}://${req.get(
   //         "host"
   //     )}/synapse/v1/users/verify-email${unHashedToken}`);
+
+  // console.log(`${req.protocol}://${req.get(
+  //         "host"
+  //     )}/api/v1/synapse/users/verify-email/${unHashedToken}`);
+
 
 
   await sendMail({
@@ -101,7 +102,7 @@ const createAccount = asyncHandler(async (req, res) => {
       user.username,
       `${req.protocol}://${req.get(
           "host"
-      )}/synapse/v1/users/verify-email${unHashedToken}`
+      )}/api/v1/synapse/users/verify-email/${unHashedToken}`
     )
   })
 
@@ -116,101 +117,39 @@ const createAccount = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, createdUser, "Success! Your SYNAPSE account is ready."));
 });
 
-const generateOTP = asyncHandler(async(req, res) => {
-    try {
-        const otp = OTPGenerate()
-         (`Generated OTP: ${otp}`)
-
-        // Store OTP (you might want to associate it with user's email/ID)
-        storeOTP = otp
-
-        // Assuming you have user email and name from request/authentication
-        // You'll need to modify this based on how you get user info
-        const userEmail = req.user?.email || req.body?.email
-        const username = req.user?.username || req.body?.username
-
-        //  (`userEmail : ${userEmail}`);
-        //  (`username : ${username}`);
+const verifyEmail = asyncHandler(async(req,res)=>{
+  const { verificationToken } = req.params
 
 
-        if (!userEmail) {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'User email is required'))
-        }
-
-        // Generate verification URL (modify as per your frontend route)
-        const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/users/verify-otp?otp=${otp}&email=${userEmail}`
-
-         (`verificationURL :${verificationUrl}`);
-
-
-        // Send OTP email
-        // const emailSent = await sendOTPVerificationEmail(
-        //     userEmail,
-        //     username || 'User',
-        //     verificationUrl,
-        //     otp
-        // )
-
-        //  (`email :${emailSent}`);
-
-
-        // if (!emailSent) {
-        //     return res
-        //         .status(500)
-        //         .json(new ApiError(500, 'Failed to send OTP email'))
-        // }
-
-
-
-         (`OTP ${otp} sent to ${userEmail}`)
-
-        // Don't send OTP in response for security - only send success message
-        res
-            .status(200)
-            .json(new ApiResponse(200, otp, 'OTP sent successfully to your registered email'))
-
-    } catch (error) {
-        console.error('Error in generateOTP:', error.message)
-        res
-            .status(500)
-            .json(new ApiError(500, 'Error generating and sending OTP'))
-    }
-})
-
-const verifyUserEmailAndOTP = asyncHandler(async(req,res)=>{
-
-     (` storeOTP : ${storeOTP} `);
-
-  const { otp } = req.body
-
-   (` otp from body : ${otp} `);
-
-  if(otp !== storeOTP) {
-    throw new ApiError(400, "The OTP you entered is incorrect");
+  if(!verificationToken){
+    throw new ApiError(404,"Email verification Token Missing")
   }
 
-    const user = await User.findById(req.user?._id).select("-password -refreshToken")
+  let hashedToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex")
 
-    if(!user) {
-      throw new ApiError(401, "user not found")
+
+    const user = await User.findOne({
+      emailVerificationToken : hashedToken,
+      emailVerificationExpiry : {$gt : Date.now()}
+    })
+
+
+
+    if(!user){
+        throw new ApiError(404, "Token Invalid Or Expired")
     }
 
-      user.emailVerificationToken = "undefiend"
-      user.emailVerificationExpiry = "undefiend"
+    user.emailVerificationToken = undefined
+    user.emailVerificationExpiry = undefined
 
-      user.isEmailVerified = true
-      const  confirmOTP = user.OTP = otp
+    user.isEmailVerified = true
 
+    await user.save({validateBeforeSave : true})
 
-      await user.save({
-        validateBeforeSave : false
-      })
-
-     return res
-      .status(200)
-      .json(new ApiResponse(200, confirmOTP, "Email and OTP verified successfully"))
+    return res.status(200).json(new ApiResponse(200,{isEmailVerified : true},"Email Varified"))
 })
 
 const loggedInUser = asyncHandler(async (req, res) => {
@@ -227,7 +166,7 @@ const loggedInUser = asyncHandler(async (req, res) => {
       }
     );
 
-    //  (`user ${findUser}`);
+    //  console.log(`user ${findUser}`);
 
 
 
@@ -294,6 +233,8 @@ const getUser = asyncHandler(async (req, res) => {
   if (!currentUserId) {
     throw new ApiError(404, "User Token Not Found")
   }
+
+
 
   const user = await User.findById(currentUserId).select("-refreshToken -password")
 
@@ -483,11 +424,129 @@ const accessRefreshToken = asyncHandler(async(req,res)=>{
 
 })
 
-// const deleteUser = asyncHandler(async (req, res) => {
-// });
+const forgotpasswordRequest = asyncHandler(async(req,res)=>{
+  const { email } = req.body
+
+
+
+  console.log(req.body);
+
+
+  const user = await User.findOne({email})
+
+  if(!user){
+    throw new ApiError(404,"user not exist")
+  }
+
+ const {unHashedToken, tokenExpiry, hashedToken} = user.generateTemporaryToken()
+
+ user.forgotPasswordToken = hashedToken
+ user.forgotPasswordExpiry = tokenExpiry
+
+ await user.save({validateBeforeSave : false})
+
+//  await sendMail({
+//    email : user.email,
+//    subject : "Password reset Request",
+//    mailContent : forgetPasswordMailgenContent(
+//     user.username,
+//     `${process.env.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`
+//    )
+//  })
+
+  console.log(`${process.env.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`);
+
+
+ return res.status(200).json(new ApiResponse(200, {}, "Password reset mail has been sent on your mail id"))
+})
+
+const resetForgottenPassword = asyncHandler(async(req,res)=>{
+
+  const {resetToken} = req.params
+  const {newPassword} = req.body
+
+
+
+
+  let hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex")
+
+    const user = await User.findOne({
+      forgotPasswordToken : hashedToken,
+      forgotPasswordExpiry : {$gt : Date.now()}
+    })
+
+    if(!user){
+      throw new ApiError("Token Expire or Invalid")
+    }
+
+    user.forgotPasswordToken = undefined
+    user.forgotPasswordExpiry = undefined
+
+
+    user.password = newPassword
+    await user.save({validateBeforeSave: false})
+
+    console.log(user.password);
+
+
+    return res.status(200).json(new ApiResponse(200, {}, 'password reset successfully'))
+})
+
+const handleSocialLogin = asyncHandler(async (req, res) => {
+
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw new ApiError(404, "User does not exist");
+  }
+
+  const { accessToken, refreshToken } = await generateAccessRefreshToken(
+    user._id
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  return res
+    .status(301)
+    .cookie("accessToken", accessToken, options) // set the access token in the cookie
+    .cookie("refreshToken", refreshToken, options) // set the refresh token in the cookie
+    .redirect(
+      // redirect user to the frontend with access and refresh token in case user is not using cookies
+      `${process.env.CLIENT_SSO_REDIRECT_URL}?accessToken=${accessToken}&refreshToken=${refreshToken}`
+    );
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+  console.log(req.user);
+
+  await User.findByIdAndDelete(req.user._id)
+
+  return res.status(200).json(new ApiResponse(200, {}, "user delete"))
+});
+
 
 
 export {
-    accessRefreshToken, changeCurrentPassword, createAccount, forgetPasswordRequest, generateAccessRefreshToken, generateOTP, getUser, loggedInUser,
-    loggedOutUser, updateUserAvatar, updateUserFullName, updateUsername, verifyUserEmailAndOTP
+  accessRefreshToken,
+  changeCurrentPassword,
+  createAccount,
+  forgetPasswordRequest,
+  generateAccessRefreshToken,
+  getUser,
+  handleSocialLogin,
+  loggedInUser,
+  loggedOutUser,
+  updateUserAvatar,
+  updateUserFullName,
+  updateUsername,
+  verifyEmail,
+  deleteUser,
+  forgotpasswordRequest,
+  resetForgottenPassword
 };

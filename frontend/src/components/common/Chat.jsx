@@ -19,6 +19,7 @@ function Chat() {
   const fetchChats = useCallback(async () => {
   if (!user?._id) return
 
+
   setLoadingChats(true)
 
   await requestHandler(
@@ -137,6 +138,8 @@ function Chat() {
         onNewChatClick={handleNewChatClick}
       />
 
+
+
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {selectedChat ? (
@@ -145,6 +148,7 @@ function Chat() {
             currentUserId={user._id}
             otherUser={getOtherUser()}
             onMessageSent={handleMessageSent}
+            chats={chats}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8">
