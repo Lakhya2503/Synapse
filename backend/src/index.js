@@ -1,13 +1,12 @@
-import { config } from 'dotenv'
 import connectDB from './db/index.js'
 import { httpServer } from './app.js'
 import logger from './logger/winston.logger.js'
+import { ENV } from './utils/ENV.js'
 
-// Load environment variables
-config({ path: './.env' })
 
-const PORT = process.env.PORT || 8000
-const isProduction = process.env.NODE_ENV === 'production'
+
+const PORT = ENV.PORT || 8000
+const isProduction = ENV.NODE_ENV === 'production'
 
 // Connect to database and start server
 connectDB()
@@ -19,13 +18,13 @@ connectDB()
       logger.info(`🚀 Server is running on http://localhost:${PORT}`)
 
       // Log CORS origins
-      if (process.env.CORS_ORIGIN) {
-        const origins = process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      if (ENV.CORS_ORIGIN) {
+        const origins = ENV.CORS_ORIGIN.split(',').map(o => o.trim())
         logger.info(`✅ CORS Origins: ${origins.join(', ')}`)
       }
 
       // Log session store info
-      if (process.env.MONGODB_URI) {
+      if (ENV.MONGODB_URI) {
         logger.info('✅ Using MongoDB for session storage')
       } else if (isProduction) {
         logger.warn('⚠️ Using MemoryStore in production')
@@ -61,6 +60,6 @@ const gracefulShutdown = () => {
     process.exit(1)
   }, 10000)
 }
-    
+
 process.on('SIGTERM', gracefulShutdown)
 process.on('SIGINT', gracefulShutdown)

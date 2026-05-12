@@ -11,6 +11,7 @@ import {
     forgetPasswordMailgenContent,
     sendMail
 } from "../utils/mail.js";
+import { ENV } from '../utils/ENV.js';
 
 
 const generateAccessRefreshToken = async (userId) => {
@@ -197,7 +198,7 @@ const loggedInUser = asyncHandler(async (req, res) => {
 
   const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: ENV.NODE_ENV === "production",
 };
   return res
     .status(200)
@@ -216,7 +217,7 @@ const loggedOutUser = asyncHandler(async (req, res) => {
   })
     const options = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: ENV.NODE_ENV === "production",
     };
 
   return res
@@ -265,7 +266,7 @@ const forgetPasswordRequest = asyncHandler(async (req, res) => {
     subject: `Password reset successful. You can now log in.`,
     mailContent: forgetPasswordMailgenContent(
       user.username,
-      `${process.env.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`
+      `${ENV.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`
     ),
   });
 
@@ -380,7 +381,7 @@ const accessRefreshToken = asyncHandler(async(req,res)=>{
 
         const decodedToken =jwt.verify(
             incommingRefreshToken,
-            process.env.REFRESH_TOKEN
+            ENV.REFRESH_TOKEN
         )
 
         const user = await User.findById(decodedToken?._id)
@@ -395,7 +396,7 @@ const accessRefreshToken = asyncHandler(async(req,res)=>{
 
     const options = {
         httpOnly : true,
-        secure : process.env.NODE_ENV === "production"
+        secure : ENV.NODE_ENV === "production"
     }
 
     const { accessToken, refreshToken : newRefreshToken } = generateAccessRefreshToken(user._id)
@@ -449,11 +450,11 @@ const forgotpasswordRequest = asyncHandler(async(req,res)=>{
 //    subject : "Password reset Request",
 //    mailContent : forgetPasswordMailgenContent(
 //     user.username,
-//     `${process.env.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`
+//     `${ENV.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`
 //    )
 //  })
 
-  console.log(`${process.env.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`);
+  console.log(`${ENV.FORGET_PASSWORD_REDIRECT_URL}/${unHashedToken}`);
 
 
  return res.status(200).json(new ApiResponse(200, {}, "Password reset mail has been sent on your mail id"))
@@ -508,7 +509,7 @@ const handleSocialLogin = asyncHandler(async (req, res) => {
 
   const options = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: ENV.NODE_ENV === "production",
   };
 
   return res
@@ -517,7 +518,7 @@ const handleSocialLogin = asyncHandler(async (req, res) => {
     .cookie("refreshToken", refreshToken, options) // set the refresh token in the cookie
     .redirect(
       // redirect user to the frontend with access and refresh token in case user is not using cookies
-      `${process.env.CLIENT_SSO_REDIRECT_URL}?accessToken=${accessToken}&refreshToken=${refreshToken}`
+      `${ENV.CLIENT_SSO_REDIRECT_URL}?accessToken=${accessToken}&refreshToken=${refreshToken}`
     );
 });
 

@@ -1,5 +1,6 @@
 import Mailgen from 'mailgen'
 import nodemailer from 'nodemailer'
+import { ENV } from './ENV.js'
 
 const sendMail = async (options) => {
     const mailGenerator = new Mailgen({
@@ -10,29 +11,28 @@ const sendMail = async (options) => {
         },
     })
 
-    
 
     const emailTextual = mailGenerator.generatePlaintext(options.mailContent)
     const emailHtml = mailGenerator.generate(options.mailContent)
-    
+
 
     const transporter = nodemailer.createTransport({
-        host: process.env.MAILSTREP_SMTP_HOST,
-        port: Number(process.env.MAILSTREP_SMTP_PORT),
+        host: ENV.MAILSTREP_SMTP_HOST,
+        port: Number(ENV.MAILSTREP_SMTP_PORT),
         auth: {
-            user: process.env.MAILSTREP_SMTP_USER,
-            pass: process.env.MAILSTREP_SMTP_PASS,
+            user: ENV.MAILSTREP_SMTP_USER,
+            pass: ENV.MAILSTREP_SMTP_PASS,
         },
     })
-    
+
     const mail = {
-        from: process.env.MAIL_FROM || 'mail.synapse@gmail.com',
+        from: ENV.MAIL_FROM || 'mail.synapse@gmail.com',
         to: options.email,
         subject: options.subject,
         text: emailTextual,
         html: emailHtml
     }
-    
+
     try {
         await transporter.sendMail(mail)
          console.log('Email sent successfully')

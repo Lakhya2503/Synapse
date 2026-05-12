@@ -1,6 +1,7 @@
 import User from "../model/user.model.js"
 import ApiError from "../utils/ApiError.js"
 import jwt from 'jsonwebtoken'
+import { ENV } from "../utils/ENV.js";
 
 export const verifyAuthUser = async (req, _, next) => {
   const token =
@@ -14,7 +15,7 @@ export const verifyAuthUser = async (req, _, next) => {
   }
 
   try {
-    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const decodedToken = jwt.verify(token, ENV.ACCESS_TOKEN_SECRET);
     const user = await User.findById(decodedToken?._id).select(
       "-password -refreshToken -emailVerificationToken -emailVerificationExpiry"
     );

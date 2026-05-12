@@ -4,9 +4,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev" : "nodemon src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon -r dotenv/config src/index.js",
-    "start": "node -r dotenv/config src/index.js"
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd ../frontend && npm install && npm run build",
+    "build:backend": "npm install --production"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +28,7 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.2",
     "express-validator": "^7.3.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mailgen": "^2.0.32",
     "mongoose": "^9.0.0",

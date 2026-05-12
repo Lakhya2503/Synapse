@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { AvailableScoialLogins, AvailableUserRoles, USER_TEMPORARY_TOKEN_EXPIRY, userLoginType, userRoleEnum } from '../constant.js'
+import { ENV } from "../utils/ENV.js";
 
 const userSchema = new Schema(
   {
@@ -84,15 +85,15 @@ userSchema.methods.generateAccessToken = function () {
     fullName: this.fullName,
     email: this.email,
   };
-  return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "15m",
+  return jwt.sign(payload, ENV.ACCESS_TOKEN_SECRET, {
+    expiresIn: ENV.ACCESS_TOKEN_EXPIRY || "15m",
   });
 };
 
 userSchema.methods.generateRefreshToken = function () {
   const payload = { _id: this._id };
-  return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d",
+  return jwt.sign(payload, ENV.REFRESH_TOKEN_SECRET, {
+    expiresIn: ENV.REFRESH_TOKEN_EXPIRY || "7d",
   });
 };
 
@@ -107,7 +108,7 @@ userSchema.methods.generateTemporaryToken = function () {
   const tokenExpiry = Date.now() + USER_TEMPORARY_TOKEN_EXPIRY
 
   return { unHashedToken, hashedToken, tokenExpiry };
-}   
+}
 
 const User = model("User", userSchema);
 export default User;

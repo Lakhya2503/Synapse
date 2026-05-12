@@ -1,4 +1,5 @@
 import wintson from 'winston'
+import { ENV } from '../utils/ENV.js'
 
 const levels = {
     error: 0,
@@ -14,7 +15,7 @@ const levels = {
 // if it was in run in  production, show  only worn and error messages
 
 const level = () => {
-    const env = process.env.NODE_ENV || "development"
+    const env = ENV.NODE_ENV || "development"
     const isDevelopment = env === "development"
     return isDevelopment ? "debug" : "warn";
 }
@@ -41,7 +42,7 @@ const formate = wintson.format.combine(
     wintson.format.timestamp({ format: "DD MMM, YYY - HH:mm:ss:ms" }),
     // Tell wintson that the logs must be colored
     wintson.format.colorize({ all: true }),
-    // Defiend the formate of the message showing the  timestamp , the level  and the message 
+    // Defiend the formate of the message showing the  timestamp , the level  and the message
     wintson.format.printf(
         (info) => `[${info.timestamp}] ${info.level}: ${info.message}`
     )

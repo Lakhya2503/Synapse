@@ -1,5 +1,6 @@
 import morgan from "morgan";
 import logger from "./wintson.logger.js";
+import { ENV } from "../utils/ENV.js";
 
 
 const stream = {
@@ -7,7 +8,7 @@ const stream = {
 }
 
 const skip = () => {
-    const env = process.env.NODE_ENV || "development";
+    const env = ENV.NODE_ENV || "development";
     return env !== "development"
 }
 

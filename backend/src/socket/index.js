@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import { ChatEventEnum } from '../constant.js'
 import User from '../model/user.model.js'
 import ApiError from '../utils/ApiError.js'
+import { ENV } from '../utils/ENV.js'
 
 const onlineUsers = new Map()
 
@@ -39,7 +40,7 @@ const mountParticipantStoppedTypingEvent = (socket) => {
     })
 }
 
-const intializeSocketIO = (io) => {
+const initializeSocketIO = (io) => {
     return io.on("connection", async (socket) => {
             try {
                 const cookies = cookie.parse(socket.handshake.headers?.cookie || "")
@@ -59,7 +60,7 @@ const intializeSocketIO = (io) => {
 
                 const decodedToken = jwt.verify(
                   token,
-                  process.env.ACCESS_TOKEN_SECRET
+                  ENV.ACCESS_TOKEN_SECRET
                 );
 
                 const user = await User
@@ -128,4 +129,4 @@ const emitSocketEvent = (req, roomId, event, payload) => {
     req.app.get("io").in(roomId).emit(event, payload)
 }
 
-export { emitSocketEvent, intializeSocketIO }
+export { emitSocketEvent, initializeSocketIO }
