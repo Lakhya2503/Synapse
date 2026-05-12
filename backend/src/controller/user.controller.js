@@ -1,17 +1,16 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { userLoginType } from "../constant.js";
 import User from "../model/user.model.js";
 import ApiError from "../utils/ApiError.js";
-import ApiResponse from "../utils/ApiResponse.js";
+import { default as ApiResponse, default as ApiRespose } from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import uploadFiles from "../utils/cloudinary.js";
 import {
-  emailVerificationMailgenContent,
-  forgetPasswordMailgenContent,
-  sendMail
+    emailVerificationMailgenContent,
+    forgetPasswordMailgenContent,
+    sendMail
 } from "../utils/mail.js";
-import ApiRespose from '../utils/ApiResponse.js';
-import crypto from 'crypto'
 
 
 const generateAccessRefreshToken = async (userId) => {
@@ -530,23 +529,115 @@ const deleteUser = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, {}, "user delete"))
 });
 
+// Get all users (Admin feature)
+const getAllUsers = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20, search = '' } = req.query
+
+  const query = {}
+
+  if (search) {
+    query.$or = [
+      { username: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } }
+    ]
+  }
+
+  const users = await User.find(query)
+    .select('-password -refreshToken -emailVerificationToken -emailVerificationExpiry -forgotPasswordToken -forgotPasswordExpiry')
+    .limit(limit * 1)
+    .skip((page - 1) * limit)
+    .sort({ createdAt: -1 })
+
+  const total = await User.countDocuments(query)
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        users,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+        totalUsers: total
+      },
+      "Users fetched successfully"
+    )
+  )
+})
+
+// Get user by ID
+const getUserById = asyncHandler(async (req, res) => {
+  const { userId } = req.params
+
+  const user = await User.findById(userId)
+    .select('-password -refreshToken -emailVerificationToken -emailVerificationExpiry -forgotPasswordToken -forgotPasswordExpiry')
+
+  if (!user) {
+    throw new ApiError(404, "User not found")
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "User fetched successfully")
+  )
+})
+
+// Update user (Admin can update any user, users can update themselves)
+const updateUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params
+  const updateData = req.body
+
+  // Remove sensitive fields from update
+  delete updateData.password
+  delete updateData.refreshToken
+  delete updateData.emailVerificationToken
+  delete updateData.emailVerificationExpiry
+  delete updateData.forgotPasswordToken
+  delete updateData.forgotPasswordExpiry
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  ).select('-password -refreshToken')
+
+  if (!user) {
+    throw new ApiError(404, "User not found")
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "User updated successfully")
+  )
+})
+
+// Delete user by ID (Admin only)
+const deleteUserByAdmin = asyncHandler(async (req, res) => {
+  const { userId } = req.params
+
+  const user = await User.findByIdAndDelete(userId)
+
+  if (!user) {
+    throw new ApiError(404, "User not found")
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, {}, "User deleted successfully")
+  )
+})
+
 
 
 export {
-  accessRefreshToken,
-  changeCurrentPassword,
-  createAccount,
-  forgetPasswordRequest,
-  generateAccessRefreshToken,
-  getUser,
-  handleSocialLogin,
-  loggedInUser,
-  loggedOutUser,
-  updateUserAvatar,
-  updateUserFullName,
-  updateUsername,
-  verifyEmail,
-  deleteUser,
-  forgotpasswordRequest,
-  resetForgottenPassword
+    accessRefreshToken,
+    changeCurrentPassword,
+    createAccount, deleteUser,
+    deleteUserByAdmin, forgetPasswordRequest, forgotpasswordRequest, generateAccessRefreshToken,
+    getAllUsers,
+    getUser,
+    getUserById,
+    handleSocialLogin,
+    loggedInUser,
+    loggedOutUser, resetForgottenPassword, updateUser,
+    updateUserAvatar,
+    updateUserFullName,
+    updateUsername,
+    verifyEmail
 };

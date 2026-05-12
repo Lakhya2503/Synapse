@@ -19,6 +19,7 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
 
   useEffect(() => {
     // Only connect if authenticated and has token
@@ -40,14 +41,17 @@ export const SocketProvider = ({ children }) => {
     }
 
     console.log("🔌 Creating new socket connection");
-    
-    // Create new socket connection
+
+    // Create new socket connection with improved reliability
     const newSocket = io(import.meta.env.VITE_SOCKET_URI, {
       auth: { token },
       transports: ["websocket", "polling"], // Fallback to polling if websocket fails
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      forceNew: false,
     });
 
     socketRef.current = newSocket;
@@ -63,6 +67,31 @@ export const SocketProvider = ({ children }) => {
       console.log("🤝 Backend handshake complete");
     });
 
+    // Handle user online/offline status
+    newSocket.on("user_online", ({ userId }) => {
+      setOnlineUsers(prev => new Set(prev).add(userId));
+    });
+
+    newSocket.on("user_offline", ({ userId }) => {
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    });
+
+    newSocket.on("user_status_changed", ({ userId, status }) => {
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        if (status === 'online') {
+          newSet.add(userId);
+        } else {
+          newSet.delete(userId);
+        }
+        return newSet;
+      });
+    });
+
     newSocket.on("disconnect", (reason) => {
       console.log("❌ Socket disconnected:", reason);
       setIsConnected(false);
@@ -76,6 +105,25 @@ export const SocketProvider = ({ children }) => {
     // Error handler
     newSocket.on("error", (error) => {
       console.error("🚨 Socket error:", error);
+    });
+
+    // Reconnection handlers
+    newSocket.on("reconnect", (attemptNumber) => {
+      console.log("🔄 Reconnected after", attemptNumber, "attempts");
+      setIsConnected(true);
+    });
+
+    newSocket.on("reconnect_attempt", () => {
+      console.log("🔄 Attempting to reconnect...");
+    });
+
+    newSocket.on("reconnect_error", (error) => {
+      console.error("🚨 Reconnection error:", error.message);
+    });
+
+    newSocket.on("reconnect_failed", () => {
+      console.error("🚨 Reconnection failed");
+      setIsConnected(false);
     });
 
     // Cleanup function
@@ -94,6 +142,7 @@ export const SocketProvider = ({ children }) => {
   const value = {
     socket,
     isConnected,
+    onlineUsers,
     emit: (event, data) => {
       if (socketRef.current?.connected) {
         return socketRef.current.emit(event, data);
@@ -114,6 +163,7 @@ export const SocketProvider = ({ children }) => {
         socketRef.current.off(event, callback);
       }
     },
+    isUserOnline: (userId) => onlineUsers.has(userId),
   };
 
   return (

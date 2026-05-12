@@ -88,7 +88,7 @@ const deleteCascadeChatMessage = async (chatId) => {
     // )
 
     // attachements.forEach((attachements) => {
-    //     //remove attachement files from the local storege
+    ////  remove attachement files from the local storege
     //     removeEventListener(attachements.localPath)
     // })
 
@@ -628,7 +628,7 @@ const getAllChats = asyncHandler(async (req, res) => {
 })
 
 const blockChat = asyncHandler(async(req,res)=>{
-    
+
     const { chatId } = req.params
 
 
@@ -663,7 +663,7 @@ const blockChat = asyncHandler(async(req,res)=>{
 
     const payload = chat[0]
 
-    
+
 
     payload.participants.forEach((participant)=>{
         emitSocketEvent(
@@ -681,7 +681,7 @@ const blockChat = asyncHandler(async(req,res)=>{
 
 
 const unBlockChat = asyncHandler(async(req,res)=>{
-    
+
     const { chatId } = req.params
 
 
@@ -717,7 +717,7 @@ const unBlockChat = asyncHandler(async(req,res)=>{
     const payload = chat[0]
 
 
-    
+
 
     payload.participants.forEach((participant)=>{
         emitSocketEvent(
@@ -734,7 +734,7 @@ const unBlockChat = asyncHandler(async(req,res)=>{
 })
 
 const archivedChat = asyncHandler(async(req,res)=>{
-    
+
     const { chatId } = req.params
 
 
@@ -770,7 +770,7 @@ const archivedChat = asyncHandler(async(req,res)=>{
     const payload = chat[0]
 
     console.log(payload);
-    
+
 
     payload.participants.forEach((participant)=>{
         emitSocketEvent(
@@ -787,7 +787,7 @@ const archivedChat = asyncHandler(async(req,res)=>{
 })
 
 const unArivedChat = asyncHandler(async(req,res)=>{
-      
+
     const { chatId } = req.params
 
 
@@ -823,7 +823,7 @@ const unArivedChat = asyncHandler(async(req,res)=>{
     const payload = chat[0]
 
     console.log(payload);
-    
+
 
     payload.participants.forEach((participant)=>{
         emitSocketEvent(

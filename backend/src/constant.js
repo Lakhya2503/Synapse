@@ -1,4 +1,3 @@
-
 const userRoleEnum = {
     ADMIN: "ADMIN",
     USER : "USER"
@@ -17,7 +16,7 @@ const AvailableOrderStatus = Object.values(orderStatusEnum)
 const userLoginType = {
     GOOGLE: "GOOGLE",
     GITHUB: "GITHUB",
-    EMAIL_PASSWORD : "EMAIL_PASSWORD"
+    EMAIL_PASSWORD : "EMAIL_PASSWORD" 
 }
 
 const AvailableScoialLogins =Object.values(userLoginType)

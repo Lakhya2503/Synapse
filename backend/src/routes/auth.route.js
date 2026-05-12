@@ -2,31 +2,34 @@ import { Router } from "express";
 import passport from "passport";
 import checker from "../controller/checkr.controller.js";
 import {
-  accessRefreshToken,
-  createAccount,
-  deleteUser,
-  forgetPasswordRequest,
-  forgotpasswordRequest,
-  getUser,
-  handleSocialLogin,
-  loggedInUser,
-  loggedOutUser,
-  resetForgottenPassword,
-  updateUserAvatar,
-  updateUserFullName,
-  updateUsername,
-  verifyEmail,
+    accessRefreshToken,
+    createAccount,
+    deleteUser,
+    deleteUserByAdmin,
+    forgetPasswordRequest,
+    forgotpasswordRequest,
+    getAllUsers,
+    getUser,
+    getUserById,
+    handleSocialLogin,
+    loggedInUser,
+    loggedOutUser,
+    resetForgottenPassword,
+    updateUser,
+    updateUserAvatar,
+    updateUsername,
+    verifyEmail
 } from "../controller/user.controller.js";
 import { verifyAuthUser } from "../middleware/auth.js";
 import upload from "../middleware/multer.js";
 import '../passport/index.js';
+import { mongoIdPathVariableValidator } from "../validator/mongodb.validator.js";
 import {
-  userForgetPasswordValidator,
-  userLoginValidator,
-  userRegisterValidator
+    userForgetPasswordValidator,
+    userLoginValidator,
+    userRegisterValidator
 } from '../validator/user.validator.js';
 import { validate } from '../validator/validate.js';
-import { mongoIdPathVariableValidator } from "../validator/mongodb.validator.js";
 
 const router = Router()
 
@@ -64,7 +67,7 @@ router.route("/users/verify-email/:verificationToken").get(mongoIdPathVariableVa
 
 router.route('/avatar').patch(upload.fields([
     {
-        name: 'avatar', 
+        name: 'avatar',
         maxCount : 2
     }
 ]),verifyAuthUser, updateUserAvatar)
@@ -81,6 +84,7 @@ router.route("/google").get(
     scope: ["profile", "email"],
   }),
 );
+
 
 router.route("/github").get(
   passport.authenticate("github", {
@@ -103,5 +107,12 @@ router
 
 router.route('/delete-user').delete(verifyAuthUser, deleteUser)
 
+// User management routes (can be used by admin or users)
+router.route('/users').get(verifyAuthUser, getAllUsers)
+
+router.route('/users/:userId')
+  .get(verifyAuthUser, getUserById)
+  .patch(verifyAuthUser, updateUser)
+  .delete(verifyAuthUser, deleteUserByAdmin)
 
 export default router

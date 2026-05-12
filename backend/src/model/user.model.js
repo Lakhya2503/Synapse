@@ -107,7 +107,7 @@ userSchema.methods.generateTemporaryToken = function () {
   const tokenExpiry = Date.now() + USER_TEMPORARY_TOKEN_EXPIRY
 
   return { unHashedToken, hashedToken, tokenExpiry };
-} 
+}   
 
 const User = model("User", userSchema);
 export default User;

@@ -21,6 +21,8 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+
+
 passport.use(
   new GoogleStrategy(
     {
@@ -90,7 +92,7 @@ passport.use(
       try {
         const email = profile.emails?.[0]?.value;
 
-        
+
 
         if (!email) {
           return done(

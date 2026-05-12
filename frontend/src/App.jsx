@@ -1,24 +1,25 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../src/context/AuthContext'
-import PublicRoute from './components/auth/PublicRoute'
-import ProtectedRoute from './components/auth/ProtectedRoute'
+import ForgetPasswordRequest from './components/auth/ForgetPasswordRequest'
 import Login from './components/auth/Login'
+import OAuthHandler from './components/auth/OAuthHandler'
+import ProtectedRoute from './components/auth/ProtectedRoute'
+import PublicRoute from './components/auth/PublicRoute'
 import Register from './components/auth/Register'
-import Synapse from './pages/Synapse'
-import Profile from './components/common/Profile'
+import ResetForgottenPassword from './components/auth/ResetForgottenPassword'
+import Archive from './components/common/Archive'
 import Chat from './components/common/Chat'
 import Group from './components/common/Group'
-import Archive from './components/common/Archive'
+import Profile from './components/common/Profile'
 import Setting from './components/common/Setting'
-import NewChat from './components/forms/NewChat'
-import NewGroup from './components/forms/NewGroup'
-import NewCommunity from './components/forms/NewCommunity'
-import Explore from './components/forms/Explore'
 import AIAssistanctChat from './components/forms/AIAssistanctChat'
 import ChatWithOneOnOne from './components/forms/ChatWithOneOnOne'
-import OAuthHandler from './components/auth/OAuthHandler'
-import ForgetPasswordRequest from './components/auth/ForgetPasswordRequest'
-import ResetForgottenPassword from './components/auth/ResetForgottenPassword'
+import Explore from './components/forms/Explore'
+import NewChat from './components/forms/NewChat'
+import NewCommunity from './components/forms/NewCommunity'
+import NewGroup from './components/forms/NewGroup'
+// import UsersManagement from './components/pages/UsersManagement'
+import Synapse from './pages/Synapse'
 
 function App() {
   const { token, user } = useAuth()
@@ -88,6 +89,8 @@ function App() {
         <Route path="group" element={<Group />} />
         <Route path="archive" element={<Archive />} />
         <Route path="setting" element={<Setting />} />
+        {/* <Route path="users" element={<UsersManagement />} /> */}
+        {/* <Route path="users/:userId/edit" element={<UsersManagement />} /> */}
       </Route>
 
         <Route path="/user/profile" element={<Profile />} />

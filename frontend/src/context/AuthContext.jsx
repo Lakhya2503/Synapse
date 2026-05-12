@@ -161,7 +161,7 @@ const handleOAuthPopup = (url) => {
 
 const loginWithGoogle = () =>
   handleOAuthPopup(`${import.meta.env.VITE_SERVER_URI}/google`);
-
+  
 const loginWithGithub = () =>
   handleOAuthPopup(`${import.meta.env.VITE_SERVER_URI}/github`);
 

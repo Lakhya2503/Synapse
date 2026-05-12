@@ -265,8 +265,8 @@ export const deleteUser = () => {
   return apiClient.delete("/delete-user")
 }
 
-export const updateUser = () => {
-  return apiClient.patch("/user-update")
+export const updateUserProfile = (username) => {
+  return apiClient.post('/update-username', username)
 }
 
 export const forgetPasswordRequest = (email) => {
@@ -277,6 +277,24 @@ export const resetForgottenPassword = (resetToken,newPassword) => {
    return apiClient.post(`/reset-password/${resetToken}`, {newPassword : newPassword})
 }
 
-export const updateUserProfile = (username) => {
-  return apiClient.post('/update-username', username)
+/* =======================
+   USER MANAGEMENT APIs
+======================= */
+export const getAllUsersApi = (params = {}) => {
+  const { page = 1, limit = 20, search = '' } = params
+  return apiClient.get('/users', {
+    params: { page, limit, search }
+  })
+}
+
+export const getUserByIdApi = (userId) => {
+  return apiClient.get(`/users/${userId}`)
+}
+
+export const updateUserApi = (userId, data) => {
+  return apiClient.patch(`/users/${userId}`, data)
+}
+
+export const deleteUserByAdmin = (userId) => {
+  return apiClient.delete(`/users/${userId}`)
 }

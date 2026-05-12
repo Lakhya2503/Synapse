@@ -1,7 +1,7 @@
-import { Archive, MessageSquare, Phone, Settings, Users } from 'lucide-react';
+import { Archive, MessageSquare, Settings, UserCog, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Logo, FakeUserAvatar } from '../../public/index';
+import { FakeUserAvatar, Logo } from '../../public/index';
 import { useAuth } from '../context/AuthContext';
 
 const Synapse = () => {
@@ -13,6 +13,7 @@ const Synapse = () => {
   const menuItems = [
     { id: 'chat', icon: <MessageSquare size={22} />, label: 'Chats', path: 'chat' },
     { id: 'group', icon: <Users size={22} />, label: 'Groups', path: 'group' },
+    // { id: 'users', icon: <UserCog size={22} />, label: 'Users', path: 'users' },
     { id: 'archive', icon: <Archive size={22} />, label: 'Archived', path: 'archive' },
     { id: 'setting', icon: <Settings size={22} />, label: 'Settings', path: 'setting' },
   ];

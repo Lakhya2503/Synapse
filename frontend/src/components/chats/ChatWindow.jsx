@@ -1,43 +1,37 @@
 import {
-  ReplyIcon,
-  SearchIcon,
-  SendIcon,
-  Paperclip,
-  Smile,
-  Copy,
-  Lock,
-  Unlock
+    Lock,
+    Paperclip,
+    SearchIcon,
+    SendIcon,
+    Smile
 } from "lucide-react";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
 } from "react";
 import { FakeGroupAvatar } from "../../../public";
 import {
-  createUserChat,
-  deleteMessage,
-  getAllMessages,
-  sendMessage
+    createUserChat,
+    deleteMessage,
+    getAllMessages,
+    sendMessage
 } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import { requestHandler } from "../../utils";
 import { ChatEventEnum } from "../../utils/constant";
+import MessageBubble from '../common/MessageBubble';
+import { emojis } from "../ui/emojis";
 import {
-  CloseIcon,
-  debounce,
-  DeleteIcon,
-  EditIcon,
-  formatMessageDate,
-  formatTime,
-  ProfileIcon
+    CloseIcon,
+    debounce,
+    formatMessageDate,
+    ProfileIcon
 } from '../ui/IconsAndUtility';
 import ProfileSection from "./ProfileSection";
-import { emojis } from "../ui/emojis";
-import MessageBubble from '../common/MessageBubble'
 
 // Main Chat Window Component
 const ChatWindow = ({ otherUser, onMessageSent, chats, filterChat, chat }) => {
@@ -172,6 +166,16 @@ const ChatWindow = ({ otherUser, onMessageSent, chats, filterChat, chat }) => {
       });
     };
 
+    const handleStopTyping = ({ chatId: id, userId, isTyping: typing }) => {
+      if (id !== chatId || isBlocked?.status) return;
+
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    };
+
 
     const handleMessageRead = ({ chatId: id, messageIds }) => {
       if (id !== chatId) return;
@@ -199,6 +203,7 @@ const ChatWindow = ({ otherUser, onMessageSent, chats, filterChat, chat }) => {
     const listeners = [
       [ChatEventEnum.MESSAGE_RECEIVED_EVENT, handleMessageReceived],
       [ChatEventEnum.TYPING_EVENT, handleTyping],
+      [ChatEventEnum.STOP_TYPING_EVENT, handleStopTyping],
       [ChatEventEnum.MESSAGE_READ_EVENT, handleMessageRead],
       [ChatEventEnum.MESSAGE_DELETED_EVENT, handleMessageDeleted],
       [ChatEventEnum.MESSAGE_UPDATED_EVENT, handleMessageUpdated]
@@ -246,21 +251,15 @@ const ChatWindow = ({ otherUser, onMessageSent, chats, filterChat, chat }) => {
     debounce(() => {
       if (!socket || !chatId || isBlocked?.status) return;
 
-      socket.emit(ChatEventEnum.TYPING_EVENT, {
-        chatId,
-        isTyping: true,
-      });
+      socket.emit(ChatEventEnum.TYPING_EVENT, chatId);
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
       typingTimeoutRef.current = setTimeout(() => {
-        socket.emit(ChatEventEnum.TYPING_EVENT, {
-          chatId,
-          isTyping: false,
-        });
-      }, 1000);
+        socket.emit(ChatEventEnum.STOP_TYPING_EVENT, chatId);
+      }, 2000);
     }, 300),
     [socket, chatId, isBlocked]
   );

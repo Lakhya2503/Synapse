@@ -13,15 +13,29 @@ const mountJoinChatEvent = (socket) => {
     })
 }
 
+const mountLeaveChatEvent = (socket) => {
+    socket.on(ChatEventEnum.LEAVE_CHAT_EVENT, (chatId) => {
+        socket.leave(chatId)
+    })
+}
+
 const mountParticipantTypingEvent = (socket) => {
     socket.on(ChatEventEnum.TYPING_EVENT, (chatId) => {
-        socket.in(chatId).emit(ChatEventEnum.TYPING_EVENT, chatId)
+        socket.in(chatId).emit(ChatEventEnum.TYPING_EVENT, {
+            chatId,
+            userId: socket.user._id,
+            isTyping: true
+        })
     })
 }
 
 const mountParticipantStoppedTypingEvent = (socket) => {
     socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId) => {
-        socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT, chatId)
+        socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT, {
+            chatId,
+            userId: socket.user._id,
+            isTyping: false
+        })
     })
 }
 
@@ -64,19 +78,21 @@ const intializeSocketIO = (io) => {
                 socket.join(user._id.toString())
 
                 socket.emit(ChatEventEnum.CONNECTED_EVENT)
-                socket.emit(ChatEventEnum.USER_ONLINE_EVENT)
+                socket.emit(ChatEventEnum.USER_ONLINE_EVENT, { userId: user._id })
 
                 //  (`USER CONNECTED ✨✨ .userID: ${user._id.toString()}`);
 
                 onlineUsers.set(user._id, socket.id);
 
                 io.emit("user_online", { userId: user._id });
+                io.emit("user_status_changed", { userId: user._id, status: 'online' });
 
                 //  (`user online ${user._id}`);
 
 
 
                 mountJoinChatEvent(socket)
+                mountLeaveChatEvent(socket)
                 mountParticipantTypingEvent(socket)
                 mountParticipantStoppedTypingEvent(socket)
 
@@ -86,11 +102,19 @@ const intializeSocketIO = (io) => {
 
                      onlineUsers.delete(user._id);
                      io.emit("user_offline", { userId: user._id });
+                     io.emit("user_status_changed", { userId: user._id, status: 'offline' });
 
                     if (socket.user?._id) {
                         socket.leave(socket.user._id)
                     }
                 })
+
+                // Handle unexpected disconnects
+                socket.on('disconnect', (reason) => {
+                    onlineUsers.delete(user._id);
+                    io.emit("user_offline", { userId: user._id });
+                    io.emit("user_status_changed", { userId: user._id, status: 'offline' });
+                });
             } catch (error) {
                 socket.emit(
                     ChatEventEnum.SOCKET_EVENT_ERROR,
